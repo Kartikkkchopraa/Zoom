@@ -22,7 +22,7 @@ export function JoinMeetingModal({ open, onClose }: { open: boolean; onClose: ()
   const [name, setName] = useState<string | null>(null); // null = use default
   const [rememberName, setRememberName] = useState(true);
   const [noAudio, setNoAudio] = useState(false);
-  const [videoOff, setVideoOff] = useState(false);
+  const [videoOffChoice, setVideoOff] = useState<boolean | null>(null); // null = use setting
 
   const [step, setStep] = useState<"details" | "passcode">("details");
   const [passcode, setPasscode] = useState("");
@@ -30,6 +30,7 @@ export function JoinMeetingModal({ open, onClose }: { open: boolean; onClose: ()
   const [busy, setBusy] = useState(false);
 
   const displayName = (name ?? remembered.name ?? me?.user.name ?? "").trimStart();
+  const videoOff = videoOffChoice ?? me?.settings.video_off_on_join ?? false;
 
   function reset() {
     setStep("details");

@@ -136,6 +136,12 @@ function MeetingsView() {
         >
           <ChevronLeft className="size-4" /> Meetings
         </button>
+        {!selected && !isPending && (
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-ink-3">
+            <CalendarPlus className="size-10" strokeWidth={1.2} />
+            <p className="text-sm">Select a meeting to see its details</p>
+          </div>
+        )}
         {selected && (
           <MeetingDetail
             key={selected.id}

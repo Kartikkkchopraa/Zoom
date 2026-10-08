@@ -1,4 +1,4 @@
-import type { Me, Meeting, MeetingRoom, MeetingScope } from "./types";
+import type { Me, Meeting, MeetingRoom, MeetingScope, UserSettings } from "./types";
 
 export const isUnauthenticated = (err: unknown) => err instanceof ApiError && err.status === 401;
 
@@ -54,6 +54,10 @@ export const api = {
   signup: (name: string, email: string, password: string) =>
     request<Me>("/auth/signup", { method: "POST", body: json({ name, email, password }) }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
+  updateMe: (patch: { name?: string }) =>
+    request<Me>("/users/me", { method: "PATCH", body: json(patch) }),
+  updateSettings: (patch: Partial<UserSettings>) =>
+    request<Me>("/users/me/settings", { method: "PATCH", body: json(patch) }),
 
   listMeetings: (scope: MeetingScope, limit = 50) =>
     request<Meeting[]>(`/meetings?scope=${scope}&limit=${limit}`),

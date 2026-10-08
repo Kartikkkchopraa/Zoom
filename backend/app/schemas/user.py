@@ -1,4 +1,6 @@
-from pydantic import BaseModel, ConfigDict
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserBrief(BaseModel):
@@ -20,3 +22,14 @@ class UserSettingsOut(BaseModel):
 
     mute_mic_on_join: bool
     video_off_on_join: bool
+
+
+class UserUpdate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    name: Annotated[str, Field(min_length=1, max_length=100)] | None = None
+
+
+class UserSettingsUpdate(BaseModel):
+    mute_mic_on_join: bool | None = None
+    video_off_on_join: bool | None = None

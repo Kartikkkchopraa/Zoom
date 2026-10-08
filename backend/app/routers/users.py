@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import CurrentUser, DbSession
 from app.models import User
 from app.schemas.meeting import MeetingOut
-from app.schemas.user import UserOut, UserSettingsOut
+from app.schemas.user import UserOut, UserSettingsOut, UserSettingsUpdate, UserUpdate
 from app.services import meeting_service
 
 router = APIRouter(prefix="/api/users", tags=["users"])
@@ -27,4 +27,20 @@ def build_me(db: Session, user: User) -> MeOut:
 
 @router.get("/me", response_model=MeOut)
 def me(db: DbSession, user: CurrentUser):
+    return build_me(db, user)
+
+
+@router.patch("/me", response_model=MeOut)
+def update_me(body: UserUpdate, db: DbSession, user: CurrentUser):
+    for field, value in body.model_dump(exclude_none=True).items():
+        setattr(user, field, value)
+    db.commit()
+    return build_me(db, user)
+
+
+@router.patch("/me/settings", response_model=MeOut)
+def update_settings(body: UserSettingsUpdate, db: DbSession, user: CurrentUser):
+    for field, value in body.model_dump(exclude_none=True).items():
+        setattr(user.settings, field, value)
+    db.commit()
     return build_me(db, user)

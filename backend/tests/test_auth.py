@@ -86,3 +86,13 @@ def test_signed_out_guest_can_join_by_link_but_not_host(client):
 def test_a_fresh_browser_gets_the_default_user(client):
     with TestClient(app) as other_browser:
         assert other_browser.get("/api/users/me").status_code == 200
+
+
+def test_update_profile_and_settings(client):
+    me = client.patch("/api/users/me", json={"name": "  Aryan C  "}).json()
+    assert me["user"]["name"] == "Aryan C"
+    assert me["user"]["initials"] == "AC"
+
+    me = client.patch("/api/users/me/settings", json={"video_off_on_join": True}).json()
+    assert me["settings"] == {"mute_mic_on_join": True, "video_off_on_join": True}
+    assert client.patch("/api/users/me", json={"name": ""}).status_code == 422

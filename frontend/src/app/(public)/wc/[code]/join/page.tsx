@@ -57,7 +57,7 @@ export default function BrowserJoinPage({
         credential,
         passcode: needsPasscode ? passcode : undefined,
         joinAudio: true,
-        videoOn: true,
+        videoOn: !me?.settings.video_off_on_join,
         asHost: false,
       });
       router.push(`/wc/${code}`);

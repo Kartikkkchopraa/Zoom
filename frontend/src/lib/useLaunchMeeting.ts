@@ -44,7 +44,7 @@ export function useLaunchMeeting() {
     displayName: me?.user.name ?? "Host",
     credential: meeting.meeting_code,
     joinAudio: true,
-    videoOn: useMeetingPrefs.getState().startWithVideo,
+    videoOn: useMeetingPrefs.getState().startWithVideo && !me?.settings.video_off_on_join,
     asHost: true,
   });
 
@@ -70,7 +70,7 @@ export function useLaunchMeeting() {
         displayName: me?.user.name ?? "Guest",
         credential: meeting.invite_link,
         joinAudio: true,
-        videoOn: true,
+        videoOn: !me?.settings.video_off_on_join,
         asHost: false,
       });
     });

@@ -255,7 +255,7 @@ export function ScheduleForm({ meeting }: { meeting?: Meeting }) {
                   <button
                     type="button"
                     onClick={() => setDatePickerOpen((o) => !o)}
-                    className="flex h-8 w-[240px] items-center justify-between rounded-lg border border-[#c5c9d0] bg-white px-3 text-sm"
+                    className="flex h-8 w-[200px] items-center justify-between rounded-lg border border-[#c5c9d0] bg-white px-3 text-sm lg:w-[240px]"
                   >
                     {form.date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" })}
                     <CalendarDays className="size-4 text-ink-2" />
@@ -271,7 +271,7 @@ export function ScheduleForm({ meeting }: { meeting?: Meeting }) {
                   }}
                 />
               </Popover>
-              <Select aria-label="Time" value={form.time} onChange={(e) => set({ time: e.target.value })} className="w-[168px]">
+              <Select aria-label="Time" value={form.time} onChange={(e) => set({ time: e.target.value })} className="w-[130px] lg:w-[168px]">
                 {timeSlots.map((t) => (
                   <option key={t}>{t}</option>
                 ))}
@@ -280,7 +280,7 @@ export function ScheduleForm({ meeting }: { meeting?: Meeting }) {
                 aria-label="AM or PM"
                 value={form.period}
                 onChange={(e) => set({ period: e.target.value as "AM" | "PM" })}
-                className="w-[104px]"
+                className="w-[90px] lg:w-[104px]"
               >
                 <option>AM</option>
                 <option>PM</option>
