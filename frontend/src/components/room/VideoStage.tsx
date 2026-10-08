@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import { fitGrid, useElementSize } from "@/lib/meeting/layout";
 import type { Participant } from "@/lib/meeting/room";
@@ -11,16 +11,11 @@ import { VideoTile, VideoView } from "./VideoTile";
 
 const FILMSTRIP_HEIGHT = 112;
 
-/** Reports a participant's voice activity up to the stage (renders nothing). */
-function SpeakingProbe({
-  participant,
-  onChange,
-}: {
-  participant: Participant;
-  onChange: (id: string, speaking: boolean) => void;
-}) {
+/** Feeds a participant's voice activity into the room store (renders nothing). */
+function SpeakingProbe({ participant }: { participant: Participant }) {
   const speaking = useSpeaking(participant.audioTrack, !participant.micMuted);
-  useEffect(() => onChange(participant.id, speaking), [participant.id, speaking, onChange]);
+  const setSpeaking = useRoom((s) => s.setSpeaking);
+  useEffect(() => setSpeaking(participant.id, speaking), [participant.id, speaking, setSpeaking]);
   return null;
 }
 
@@ -28,35 +23,22 @@ function SpeakingProbe({
 export function VideoStage({ participants }: { participants: Participant[] }) {
   const view = useRoom((s) => s.view);
   const pinnedId = useRoom((s) => s.pinnedId);
+  const speaking = useRoom((s) => s.speaking);
+  const activeId = useRoom((s) => s.activeSpeakerId);
   const [ref, size] = useElementSize<HTMLDivElement>();
-  const [speaking, setSpeaking] = useState<Record<string, boolean>>({});
-  const [activeId, setActiveId] = useState<string | null>(null);
-
-  const onSpeaking = useCallback((id: string, isSpeaking: boolean) => {
-    setSpeaking((s) => (s[id] === isSpeaking ? s : { ...s, [id]: isSpeaking }));
-    // Speaker view sticks to whoever spoke last.
-    if (isSpeaking) setActiveId(id);
-  }, []);
 
   const sharer = participants.find((p) => p.sharing && p.screenStream);
   const byId = (id: string | null) => participants.find((p) => p.id === id);
+  const pinned = byId(pinnedId);
   // Zoom prefers showing someone else in Speaker view when you're the one talking.
   const others = participants.filter((p) => !p.isSelf);
-  const main =
-    byId(pinnedId) ??
-    (byId(activeId)?.isSelf ? undefined : byId(activeId)) ??
-    others[0] ??
-    participants[0];
-
-  const probes = participants.map((p) => (
-    <SpeakingProbe key={p.id} participant={p} onChange={onSpeaking} />
-  ));
+  const main = pinned ?? (byId(activeId)?.isSelf ? undefined : byId(activeId)) ?? others[0] ?? participants[0];
 
   let content: React.ReactNode = null;
   if (size.width > 0) {
     if (sharer) {
       content = <ShareLayout sharer={sharer} participants={participants} speaking={speaking} size={size} />;
-    } else if (view === "gallery" || participants.length === 1) {
+    } else if (participants.length === 1 || (view === "gallery" && !pinned)) {
       content = <GalleryLayout participants={participants} speaking={speaking} size={size} />;
     } else {
       content = <SpeakerLayout main={main} participants={participants} speaking={speaking} size={size} />;
@@ -65,7 +47,9 @@ export function VideoStage({ participants }: { participants: Participant[] }) {
 
   return (
     <div ref={ref} className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-room">
-      {probes}
+      {participants.map((p) => (
+        <SpeakingProbe key={p.id} participant={p} />
+      ))}
       {content}
     </div>
   );

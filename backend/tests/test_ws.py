@@ -167,3 +167,27 @@ def test_room_ends_after_everyone_leaves(client, db):
         return db.get(Meeting, meeting["id"]).status is MeetingStatus.ENDED
 
     assert _wait_for(ended)
+
+
+def test_only_one_person_can_share(client):
+    code = _instant(client)["meeting_code"]
+    url = f"/ws/meetings/{code}"
+    with client.websocket_connect(url) as host, client.websocket_connect(url) as guest:
+        _join(host, _token(client, code), "Host", as_host=True)
+        _join(guest, _token(client, code), "Guest")
+        host.receive_json()  # peer_joined
+
+        host.send_json({"type": "state", "patch": {"sharing": True}})
+        assert guest.receive_json()["patch"] == {"sharing": True}
+
+        # A second sharer is refused, but the rest of their update still applies.
+        guest.send_json({"type": "state", "patch": {"sharing": True, "video_on": True}})
+        error = guest.receive_json()
+        assert (error["type"], error["code"]) == ("error", "share_in_use")
+        assert host.receive_json()["patch"] == {"video_on": True}
+
+        # Once the first share stops, the next one is allowed.
+        host.send_json({"type": "state", "patch": {"sharing": False}})
+        guest.receive_json()
+        guest.send_json({"type": "state", "patch": {"sharing": True}})
+        assert host.receive_json()["patch"] == {"sharing": True}

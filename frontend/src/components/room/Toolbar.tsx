@@ -242,7 +242,7 @@ export function Toolbar({
             onClick={() => (roomActions.toggleHand(), close())}
             className="mt-3 flex w-full items-center justify-center gap-2 rounded-md bg-room-control py-2 text-sm hover:bg-[#35363a]"
           >
-            <Hand className="size-4 fill-[#f6c343] text-[#d9a521]" />
+            <span aria-hidden>✋</span>
             {handRaised ? "Lower Hand" : "Raise Hand"}
           </button>
         </Popover>

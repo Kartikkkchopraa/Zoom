@@ -204,10 +204,26 @@ class RoomManager:
 
     async def on_state(self, room: Room, peer: Peer, msg: StateMsg) -> None:
         patch = msg.patch.model_dump(exclude_none=True)
+        if patch.get("sharing") and not peer.state.sharing:
+            if refusal := self._share_refusal(room, peer):
+                # Keep the rest of the update; the client stops its share on this error.
+                patch.pop("sharing")
+                await self.error(peer, *refusal)
+        if not patch:
+            return
         peer.state = peer.state.model_copy(update=patch)
         await self.broadcast(
             room, {"type": "peer_updated", "peer_id": peer.id, "patch": patch}, exclude=peer
         )
+
+    def _share_refusal(self, room: Room, peer: Peer) -> tuple[str, str] | None:
+        """Why this peer may not start sharing, or None if they may."""
+        if peer.role is ParticipantRole.ATTENDEE and not room.settings["allow_share"]:
+            return "share_disabled", "The host has disabled screen sharing"
+        sharer = next((p for p in room.peers.values() if p.state.sharing and p is not peer), None)
+        if sharer:
+            return "share_in_use", f"{sharer.name} is already sharing their screen"
+        return None
 
     async def on_chat(self, room: Room, peer: Peer, msg: ChatMsg) -> None:
         if peer.role is ParticipantRole.ATTENDEE and not room.settings["allow_chat"]:

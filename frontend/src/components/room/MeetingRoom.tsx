@@ -37,6 +37,7 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
   const panel = useRoom((s) => s.panel);
   const status = useRoom((s) => s.status);
   const statusMessage = useRoom((s) => s.statusMessage);
+  const retryable = useRoom((s) => s.retryable);
   const self = useRoom((s) => s.self);
   const participants = useParticipants();
 
@@ -71,12 +72,27 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
       connection.leave();
       setCurrentConnection(null);
       connectionRef.current = null;
-      useRoom.getState().reset();
     };
   }, [meeting, session.displayName, session.asHost, attempt]);
 
-  // Devices outlive reconnects; release them only when the room unmounts.
-  useEffect(() => () => useMedia.getState().stopAll(), []);
+  // Dropped connection: retry automatically a few times before showing "Rejoin".
+  const autoRetries = useRef(0);
+  useEffect(() => {
+    if (status === "joined") autoRetries.current = 0;
+    if (status !== "error" || !retryable || autoRetries.current >= 3) return;
+    const delay = 1000 * 2 ** autoRetries.current++;
+    const timer = setTimeout(() => setAttempt((n) => n + 1), delay);
+    return () => clearTimeout(timer);
+  }, [status, retryable]);
+
+  // Devices and room state outlive reconnects; release them only when the room unmounts.
+  useEffect(
+    () => () => {
+      useMedia.getState().stopAll();
+      useRoom.getState().reset();
+    },
+    [],
+  );
 
   useEffect(() => {
     const onChange = () => setFullscreen(document.fullscreenElement === containerRef.current);

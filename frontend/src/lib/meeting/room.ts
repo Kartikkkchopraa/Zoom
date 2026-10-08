@@ -83,6 +83,11 @@ interface RoomState {
   meeting: MeetingRoom | null;
   status: ConnectionStatus;
   statusMessage: string | null;
+  /** The socket dropped unexpectedly (vs. a refusal), so reconnecting may help. */
+  retryable: boolean;
+  /** Voice activity per participant id, and whoever spoke most recently. */
+  speaking: Record<string, boolean>;
+  activeSpeakerId: string | null;
   self: SelfInfo | null;
   remote: Record<string, Participant>;
   messages: ChatMessage[];
@@ -95,7 +100,8 @@ interface RoomState {
 
   init: (meeting: MeetingRoom, self: SelfInfo) => void;
   reset: () => void;
-  setStatus: (status: ConnectionStatus, message?: string | null) => void;
+  setStatus: (status: ConnectionStatus, message?: string | null, retryable?: boolean) => void;
+  setSpeaking: (id: string, speaking: boolean) => void;
   setSelf: (patch: Partial<SelfInfo>) => void;
   setRemotes: (peers: RemoteInfo[]) => void;
   upsertRemote: (peer: RemoteInfo) => void;
@@ -116,6 +122,9 @@ const initial = {
   meeting: null,
   status: "connecting" as ConnectionStatus,
   statusMessage: null,
+  retryable: false,
+  speaking: {} as Record<string, boolean>,
+  activeSpeakerId: null as string | null,
   self: null,
   remote: {},
   messages: [],
@@ -138,9 +147,31 @@ export const useRoom = create<RoomState>((set, get) => ({
   ...initial,
 
   init: (meeting, self) =>
-    set({ ...initial, meeting, self, host: { ...initial.host, waitingRoom: meeting.waiting_room } }),
+    set((s) => ({
+      ...initial,
+      meeting,
+      self,
+      host: { ...initial.host, waitingRoom: meeting.waiting_room },
+      // Reconnecting to the same meeting keeps the chat and the user's layout choices.
+      ...(s.meeting?.id === meeting.id && {
+        messages: s.messages,
+        panel: s.panel,
+        view: s.view,
+        pinnedId: s.pinnedId,
+      }),
+    })),
   reset: () => set(initial),
-  setStatus: (status, statusMessage = null) => set({ status, statusMessage }),
+  setStatus: (status, statusMessage = null, retryable = false) => set({ status, statusMessage, retryable }),
+  setSpeaking: (id, speaking) =>
+    set((s) =>
+      s.speaking[id] === speaking
+        ? s
+        : {
+            speaking: { ...s.speaking, [id]: speaking },
+            // Speaker view sticks to whoever spoke last.
+            activeSpeakerId: speaking ? id : s.activeSpeakerId,
+          },
+    ),
   setSelf: (patch) => set((s) => ({ self: s.self && { ...s.self, ...patch } })),
 
   setRemotes: (peers) =>
@@ -153,7 +184,11 @@ export const useRoom = create<RoomState>((set, get) => ({
     set((s) => {
       const remote = { ...s.remote };
       delete remote[id];
-      return { remote, pinnedId: s.pinnedId === id ? null : s.pinnedId };
+      return {
+        remote,
+        pinnedId: s.pinnedId === id ? null : s.pinnedId,
+        activeSpeakerId: s.activeSpeakerId === id ? null : s.activeSpeakerId,
+      };
     }),
 
   setPanel: (panel) => set({ panel, ...(panel === "chat" ? { unreadChat: 0 } : {}) }),

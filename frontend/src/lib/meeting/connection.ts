@@ -159,7 +159,8 @@ export class MeetingConnection {
       if (this.closed) return;
       const { status, setStatus } = useRoom.getState();
       if (status !== "ended" && status !== "error") {
-        setStatus("error", "You have been disconnected from the meeting.");
+        // Unexpected drop (network blip, server restart): the room retries.
+        setStatus("error", "You have been disconnected from the meeting.", status === "joined");
       }
       this.teardown();
     };
@@ -221,13 +222,19 @@ export class MeetingConnection {
             ...(patch.handRaised !== undefined && { handRaised: patch.handRaised }),
           });
         } else {
+          const before = room.remote[msg.peer_id];
           room.patchRemote(msg.peer_id, toPatch(msg.patch));
+          if (before && msg.patch.hand_raised && !before.handRaised) toast(`${before.name} raised their hand`);
         }
         break;
       case "signal":
         void this.peers?.handleSignal(msg.from, msg.data).catch((err) => console.warn("signal failed", err));
         break;
       case "chat":
+        // Zoom-style preview when the chat panel is closed.
+        if (room.panel !== "chat" && msg.message.sender_id !== room.self?.id) {
+          toast(`${msg.message.sender_name}: ${msg.message.body.slice(0, 80)}`);
+        }
         room.addMessage({
           id: String(msg.message.id),
           senderId: msg.message.sender_id,
@@ -249,6 +256,7 @@ export class MeetingConnection {
         this.teardown();
         break;
       case "error":
+        if (msg.code === "share_in_use" || msg.code === "share_disabled") useMedia.getState().stopShare();
         if (room.status === "connecting") room.setStatus("error", msg.message);
         else toast(msg.message, "error");
         break;

@@ -1,6 +1,7 @@
 "use client";
 
-import { Ellipsis, Hand, Mic, MicOff, Video, VideoOff } from "lucide-react";
+import clsx from "clsx";
+import { Ellipsis, Mic, MicOff, Video, VideoOff } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/Button";
@@ -92,6 +93,7 @@ function ParticipantRow({ participant: p, onRename }: { participant: Participant
   const [menuOpen, setMenuOpen] = useState(false);
   const allowRename = useRoom((s) => s.host.allowRename);
   const canRename = p.isSelf && (allowRename || p.role !== "attendee");
+  const speaking = useRoom((s) => s.speaking[p.id] ?? false);
 
   return (
     <li className="group flex h-12 items-center gap-3 px-6 hover:bg-white/5">
@@ -102,12 +104,16 @@ function ParticipantRow({ participant: p, onRename }: { participant: Participant
         {p.name}
         <span className="text-room-text-2">{roleLabel(p)}</span>
       </span>
-      {p.handRaised && <Hand className="size-4 shrink-0 fill-[#f6c343] text-[#d9a521]" />}
+      {p.handRaised && (
+        <span aria-label="Hand raised" className="text-base leading-none">
+          ✋
+        </span>
+      )}
       {/* micMuted is also true when audio isn't connected */}
       {p.micMuted ? (
         <MicOff className="size-[18px] shrink-0 text-[#ff4d4f]" strokeWidth={1.8} />
       ) : (
-        <Mic className="size-[18px] shrink-0" strokeWidth={1.8} />
+        <Mic className={clsx("size-[18px] shrink-0", speaking && "text-[#23d959]")} strokeWidth={1.8} />
       )}
       {p.videoOn ? (
         <Video className="size-[18px] shrink-0" strokeWidth={1.8} />
