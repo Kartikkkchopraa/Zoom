@@ -12,6 +12,7 @@ from app.services.codes import format_meeting_code, parse_join_input
         ("http://localhost:3000/j/72087405307?pwd=abc_123", "72087405307", "abc_123"),
         ("localhost:3000/j/2920816742", "2920816742", None),
         ("https://zoom.example/wc/72087405307", "72087405307", None),
+        ("/j/72087405307?pwd=ab-c_1", "72087405307", "ab-c_1"),
     ],
 )
 def test_parse_join_input_accepts_ids_and_links(raw, code, token):

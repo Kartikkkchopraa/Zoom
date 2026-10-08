@@ -171,6 +171,17 @@ def test_update_and_delete_scheduled_meeting(client):
     assert client.get(f"/api/meetings/{created['id']}").status_code == 404
 
 
+def test_update_keeps_and_changes_invitees(client):
+    created = _schedule(client, invitees=["a@example.com", "b@example.com"]).json()
+    url = f"/api/meetings/{created['id']}"
+
+    # Re-sending the same list (what the edit form does) must not fail.
+    same = client.patch(url, json={"invitees": ["a@example.com", "b@example.com"]})
+    assert same.status_code == 200
+    changed = client.patch(url, json={"invitees": ["b@example.com", "c@example.com"]}).json()
+    assert changed["invitees"] == ["b@example.com", "c@example.com"]
+
+
 def test_personal_room_cannot_be_deleted(client):
     pmi_id = client.get("/api/users/me").json()["personal_meeting"]["id"]
     assert client.delete(f"/api/meetings/{pmi_id}").json()["error"]["code"] == "not_deletable"

@@ -145,7 +145,13 @@ def _set_invitees(db: Session, meeting: Meeting, emails: list[str]) -> None:
         u.email.lower(): u.id
         for u in db.scalars(select(User).where(func.lower(User.email).in_(unique)))
     }
-    meeting.invitees = [MeetingInvitee(email=e, user_id=users.get(e)) for e in unique]
+    # Diff instead of replacing the list: the unit of work inserts new rows
+    # before deleting orphans, so re-adding an existing email would violate
+    # the (meeting_id, email) unique constraint.
+    existing = {i.email: i for i in meeting.invitees}
+    meeting.invitees = [
+        existing.get(e) or MeetingInvitee(email=e, user_id=users.get(e)) for e in unique
+    ]
 
 
 # --------------------------------------------------------------------------- #
