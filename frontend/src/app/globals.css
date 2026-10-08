@@ -18,11 +18,15 @@
   --color-shell: #f1f4f6; /* app background + left rail */
   --color-field: #eceff1; /* search box */
 
-  /* Meeting room (dark) */
-  --color-room: #0c0c0c;
-  --color-room-tile: #1c1c1c;
-  --color-room-panel: #1f2023;
+  /* Meeting room (dark) — sampled from the in-meeting screenshots */
+  --color-room: #0d0d0d; /* stage background */
+  --color-room-bar: #040404; /* header + toolbar */
+  --color-room-tile: #1a1a1a; /* video tile */
+  --color-room-panel: #1d1e20; /* side panels, popovers */
+  --color-room-control: #2a2b2d; /* buttons inside panels */
   --color-room-line: #2e2f33;
+  --color-room-text-2: #a8abb2;
+  --color-zoom-end: #bd362a;
   --color-avatar: #27539c;
 }
 
@@ -42,4 +46,30 @@ button {
 }
 button:disabled {
   cursor: not-allowed;
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes float-up {
+  0% {
+    transform: translateY(0) scale(0.6);
+    opacity: 0;
+  }
+  10% {
+    transform: translateY(-20px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-260px) scale(1);
+    opacity: 0;
+  }
 }
