@@ -101,14 +101,16 @@ def default_room_settings(waiting_room: bool = False) -> dict[str, bool]:
 class Room:
     code: str
     meeting_id: int
+    owner_id: int  # the meeting owner's account
     settings: dict[str, bool]
     peers: dict[str, Peer] = field(default_factory=dict)
     # Joined before the host started the meeting ("Please wait for the host").
     waiting_for_host: dict[str, Peer] = field(default_factory=dict)
     # Held in the waiting room until a host/co-host admits them.
     waiting_room: dict[str, Peer] = field(default_factory=dict)
-    # Browsers the host removed; they can't rejoin this meeting session.
+    # Browsers and accounts the host removed; they can't rejoin this meeting session.
     removed_clients: set[str] = field(default_factory=set)
+    removed_users: set[int] = field(default_factory=set)
     live: bool = False
     ended: bool = False
     empty_timer: asyncio.Task | None = None
@@ -131,11 +133,14 @@ class RoomManager:
     def configure(self, session_factory: Callable[[], Session]) -> None:
         self.db = Db(session_factory)
 
-    def room(self, code: str, meeting_id: int, waiting_room: bool = False) -> Room:
+    def room(self, code: str, meeting_id: int, owner_id: int, waiting_room: bool = False) -> Room:
         room = self.rooms.get(code)
         if room is None or room.ended:
             room = self.rooms[code] = Room(
-                code=code, meeting_id=meeting_id, settings=default_room_settings(waiting_room)
+                code=code,
+                meeting_id=meeting_id,
+                owner_id=owner_id,
+                settings=default_room_settings(waiting_room),
             )
         return room
 
@@ -174,7 +179,9 @@ class RoomManager:
     # ---- membership ------------------------------------------------------- #
 
     async def join(self, room: Room, peer: Peer, db_status: MeetingStatus) -> None:
-        if peer.client_id and peer.client_id in room.removed_clients:
+        if (peer.client_id and peer.client_id in room.removed_clients) or (
+            peer.user_id is not None and peer.user_id in room.removed_users
+        ):
             return await self.kick(
                 room,
                 peer,
@@ -442,6 +449,10 @@ class RoomManager:
         target.removed = True
         if target.client_id:
             room.removed_clients.add(target.client_id)
+        # Block the account too, but never the meeting owner's (in demos, guests
+        # often share the default account with the host).
+        if target.user_id is not None and target.user_id != room.owner_id:
+            room.removed_users.add(target.user_id)
         await self.kick(
             room,
             target,

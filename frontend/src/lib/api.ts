@@ -1,5 +1,7 @@
 import type { Me, Meeting, MeetingRoom, MeetingScope } from "./types";
 
+export const isUnauthenticated = (err: unknown) => err instanceof ApiError && err.status === 401;
+
 /** An error returned by the backend as {"error": {code, message}}. */
 export class ApiError extends Error {
   constructor(
@@ -47,6 +49,11 @@ export interface ScheduleInput {
 
 export const api = {
   me: () => request<Me>("/users/me"),
+  login: (email: string, password: string) =>
+    request<Me>("/auth/login", { method: "POST", body: json({ email, password }) }),
+  signup: (name: string, email: string, password: string) =>
+    request<Me>("/auth/signup", { method: "POST", body: json({ name, email, password }) }),
+  logout: () => request<void>("/auth/logout", { method: "POST" }),
 
   listMeetings: (scope: MeetingScope, limit = 50) =>
     request<Meeting[]>(`/meetings?scope=${scope}&limit=${limit}`),

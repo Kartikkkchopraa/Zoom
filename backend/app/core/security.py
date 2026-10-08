@@ -15,7 +15,10 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, password_hash: str) -> bool:
-    return bcrypt.checkpw(password.encode(), password_hash.encode())
+    try:
+        return bcrypt.checkpw(password.encode(), password_hash.encode())
+    except ValueError:  # malformed stored hash: treat as a non-match, not a server error
+        return False
 
 
 @dataclass(frozen=True)
@@ -48,3 +51,21 @@ def decode_join_token(token: str) -> JoinClaims | None:
     if data.get("typ") != "join":
         return None
     return JoinClaims(data["mid"], data["code"], data.get("uid"), bool(data.get("host")))
+
+
+def create_session_token(user_id: int) -> str:
+    settings = get_settings()
+    payload = {
+        "typ": "session",
+        "sub": str(user_id),
+        "exp": utcnow() + timedelta(minutes=settings.jwt_expire_minutes),
+    }
+    return jwt.encode(payload, settings.jwt_secret, algorithm=_ALGORITHM)
+
+
+def decode_session_token(token: str) -> int | None:
+    try:
+        data = jwt.decode(token, get_settings().jwt_secret, algorithms=[_ALGORITHM])
+    except jwt.PyJWTError:
+        return None
+    return int(data["sub"]) if data.get("typ") == "session" else None

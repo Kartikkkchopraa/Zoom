@@ -2,12 +2,14 @@
 
 import { Bell, ChevronLeft, ChevronRight, History, LogOut, Search, Settings } from "lucide-react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { Avatar } from "@/components/ui/Avatar";
 import { MenuItem, Popover } from "@/components/ui/Popover";
 import { ZoomLogo } from "@/components/ui/ZoomLogo";
+import { api, isUnauthenticated } from "@/lib/api";
 import { useMe } from "@/lib/queries";
 import { toast } from "@/lib/toast";
 
@@ -92,9 +94,25 @@ export function TopBar() {
 
 function ProfileMenu() {
   const router = useRouter();
-  const { data } = useMe();
+  const queryClient = useQueryClient();
+  const { data, error } = useMe();
   const [open, setOpen] = useState(false);
   const user = data?.user;
+
+  async function signOut() {
+    setOpen(false);
+    await api.logout();
+    queryClient.clear();
+    router.replace("/signin");
+  }
+
+  if (isUnauthenticated(error)) {
+    return (
+      <Link href="/signin" className="rounded-md bg-zoom-blue px-3.5 py-1.5 text-sm font-semibold text-white hover:bg-zoom-blue-hover">
+        Sign In
+      </Link>
+    );
+  }
 
   return (
     <Popover
@@ -133,7 +151,7 @@ function ProfileMenu() {
           >
             <Settings className="size-4 text-ink-3" /> Settings
           </MenuItem>
-          <MenuItem onClick={() => toast("Sign out arrives with login (Phase 8)")}>
+          <MenuItem onClick={() => void signOut()}>
             <LogOut className="size-4 text-ink-3" /> Sign out
           </MenuItem>
         </>

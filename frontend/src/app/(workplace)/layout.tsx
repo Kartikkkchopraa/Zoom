@@ -1,3 +1,4 @@
+import { AuthGuard } from "@/components/shell/AuthGuard";
 import { LeftRail } from "@/components/shell/LeftRail";
 import { TopBar } from "@/components/shell/TopBar";
 
@@ -9,7 +10,7 @@ export default function WorkplaceLayout({ children }: { children: React.ReactNod
       <div className="flex min-h-0 flex-1">
         <LeftRail />
         <main className="mb-16 min-w-0 flex-1 overflow-y-auto bg-white md:mt-1 md:mr-1.5 md:mb-1.5 md:rounded-xl">
-          {children}
+          <AuthGuard>{children}</AuthGuard>
         </main>
       </div>
     </div>

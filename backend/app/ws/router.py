@@ -67,7 +67,7 @@ async def meeting_socket(ws: WebSocket, code: str) -> None:
         state=first.state,
         client_id=first.client_id,
     )
-    room = manager.room(code, claims.meeting_id, waiting_room=info.waiting_room)
+    room = manager.room(code, claims.meeting_id, info.host_id, waiting_room=info.waiting_room)
 
     handlers = {
         SignalMsg: manager.on_signal,

@@ -3,7 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter, Query, status
 from starlette.concurrency import run_in_threadpool
 
-from app.core.deps import CurrentUser, DbSession
+from app.core.deps import CurrentUser, DbSession, OptionalUser
 from app.schemas.meeting import (
     InstantMeetingCreate,
     InvitationOut,
@@ -48,7 +48,7 @@ def schedule(db: DbSession, user: CurrentUser, body: MeetingCreate):
 
 
 @router.post("/join-check", response_model=MeetingRoomOut)
-def join_check(db: DbSession, user: CurrentUser, body: JoinCheck):
+def join_check(db: DbSession, user: OptionalUser, body: JoinCheck):
     """Validate a meeting ID or invite link (and passcode) before joining."""
     return meeting_service.join_check(db, user, body.meeting, body.passcode)
 

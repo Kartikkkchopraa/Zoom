@@ -1,7 +1,9 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from app.core.deps import CurrentUser, DbSession
+from app.models import User
 from app.schemas.meeting import MeetingOut
 from app.schemas.user import UserOut, UserSettingsOut
 from app.services import meeting_service
@@ -15,10 +17,14 @@ class MeOut(BaseModel):
     personal_meeting: MeetingOut
 
 
-@router.get("/me", response_model=MeOut)
-def me(db: DbSession, user: CurrentUser):
+def build_me(db: Session, user: User) -> MeOut:
     return MeOut(
         user=UserOut.model_validate(user),
         settings=UserSettingsOut.model_validate(user.settings),
         personal_meeting=meeting_service.serialize_many(db, [user.personal_meeting])[0],
     )
+
+
+@router.get("/me", response_model=MeOut)
+def me(db: DbSession, user: CurrentUser):
+    return build_me(db, user)

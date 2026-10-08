@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3000"]
     jwt_secret: str = "dev-only-secret-change-me-in-production-0123456789"
     jwt_expire_minutes: int = 60 * 24 * 7
+    # Session cookie: set COOKIE_SECURE=true when served over HTTPS.
+    cookie_secure: bool = False
     # The account treated as logged in when no session exists (see deps.py).
     default_user_email: str = "aryan@zoomclone.dev"
 

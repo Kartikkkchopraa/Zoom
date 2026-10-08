@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.core.errors import register_error_handlers
-from app.routers import meetings, rtc, users
+from app.routers import auth, meetings, rtc, users
 from app.services.live_service import end_stale_live_meetings
 from app.ws import router as ws_router
 from app.ws.room import manager
@@ -39,6 +39,7 @@ app.add_middleware(
 )
 register_error_handlers(app)
 
+app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(meetings.router)
 app.include_router(rtc.router)

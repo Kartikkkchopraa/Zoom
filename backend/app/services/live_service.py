@@ -26,13 +26,14 @@ class RoomInfo:
     status: MeetingStatus
     meeting_type: MeetingType
     waiting_room: bool
+    host_id: int
 
 
 def room_info(db: Session, meeting_id: int) -> RoomInfo | None:
     meeting = db.get(Meeting, meeting_id)
     if meeting is None:
         return None
-    return RoomInfo(meeting.status, meeting.meeting_type, meeting.waiting_room)
+    return RoomInfo(meeting.status, meeting.meeting_type, meeting.waiting_room, meeting.host_id)
 
 
 def mark_live(db: Session, meeting_id: int) -> None:

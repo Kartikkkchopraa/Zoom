@@ -384,8 +384,11 @@ def end_room(db: Session, meeting: Meeting) -> str:
     return room.meeting_code
 
 
-def join_check(db: Session, user: User, raw: str, passcode: str | None) -> MeetingRoomOut:
-    """Validate a Join attempt; returns the room the client should enter."""
+def join_check(db: Session, user: User | None, raw: str, passcode: str | None) -> MeetingRoomOut:
+    """Validate a Join attempt; returns the room the client should enter.
+
+    `user` is None for a signed-out guest joining by ID or link.
+    """
     parsed = parse_join_input(raw)
     if parsed is None:
         raise BadRequestError(
@@ -400,7 +403,7 @@ def join_check(db: Session, user: User, raw: str, passcode: str | None) -> Meeti
     if room.meeting_type is MeetingType.INSTANT and room.status is MeetingStatus.ENDED:
         raise AppError(410, "meeting_ended", "This meeting has been ended by host")
 
-    is_host = room.host_id == user.id
+    is_host = user is not None and room.host_id == user.id
     has_valid_link = parsed.invite_token is not None and parsed.invite_token == room.invite_token
     if room.passcode and not (is_host or has_valid_link):
         if not passcode:
@@ -410,7 +413,10 @@ def join_check(db: Session, user: User, raw: str, passcode: str | None) -> Meeti
 
     out = serialize_many(db, [room])[0]
     token = create_join_token(
-        meeting_id=room.id, code=room.meeting_code, user_id=user.id, can_host=is_host
+        meeting_id=room.id,
+        code=room.meeting_code,
+        user_id=user.id if user else None,
+        can_host=is_host,
     )
     return MeetingRoomOut(**out.model_dump(), is_host=is_host, join_token=token)
 
