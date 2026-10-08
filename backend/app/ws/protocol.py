@@ -1,8 +1,9 @@
 """Messages a client may send on the meeting WebSocket (validated with Pydantic).
 
 Server -> client messages are plain dicts built in app/ws/room.py; their
-`type`s are: welcome, waiting_for_host, peer_joined, peer_left, peer_updated,
-signal, chat, reaction, meeting_ended, error.
+`type`s are: welcome, waiting_for_host, waiting_room, waiting_list,
+peer_joined, peer_left, peer_updated, settings_updated, signal, chat,
+reaction, force_mute, unmute_request, removed, denied, meeting_ended, error.
 """
 
 from typing import Annotated, Any, Literal
@@ -36,6 +37,8 @@ class JoinMsg(BaseModel):
     # Ask for the host role; granted only if the token says this user may host.
     as_host: bool = False
     state: PeerState = Field(default_factory=PeerState)
+    # Random id stored in the browser; lets the host's "Remove" stick on rejoin.
+    client_id: Annotated[str, Field(max_length=64)] | None = None
 
 
 class SignalMsg(BaseModel):
@@ -71,8 +74,78 @@ class LeaveMsg(BaseModel):
     type: Literal["leave"]
 
 
+# ---- host / co-host controls ------------------------------------------------ #
+
+
+class MuteMsg(BaseModel):
+    type: Literal["mute"]
+    peer_id: str
+
+
+class MuteAllMsg(BaseModel):
+    type: Literal["mute_all"]
+    # Zoom's "Allow participants to unmute themselves" checkbox in the Mute All dialog.
+    allow_unmute: bool | None = None
+
+
+class AskUnmuteMsg(BaseModel):
+    type: Literal["ask_unmute"]
+    peer_id: str | None = None  # None = everyone who is muted
+
+
+class RemoveMsg(BaseModel):
+    type: Literal["remove"]
+    peer_id: str
+
+
+class SetRoleMsg(BaseModel):
+    """Make co-host / withdraw co-host, or hand the host role over (host only)."""
+
+    type: Literal["set_role"]
+    peer_id: str
+    role: Literal["host", "co_host", "attendee"]
+
+
+class RoomSettingsPatch(BaseModel):
+    locked: bool | None = None
+    waiting_room: bool | None = None
+    allow_share: bool | None = None
+    allow_chat: bool | None = None
+    allow_rename: bool | None = None
+    allow_unmute: bool | None = None
+
+
+class SettingsMsg(BaseModel):
+    type: Literal["settings"]
+    patch: RoomSettingsPatch
+
+
+class AdmitMsg(BaseModel):
+    type: Literal["admit"]
+    peer_id: str | None = None  # None = admit everyone waiting
+
+
+class DenyMsg(BaseModel):
+    type: Literal["deny"]
+    peer_id: str
+
+
 ClientMessage = Annotated[
-    JoinMsg | SignalMsg | StateMsg | ChatMsg | ReactionMsg | RenameMsg | LeaveMsg,
+    JoinMsg
+    | SignalMsg
+    | StateMsg
+    | ChatMsg
+    | ReactionMsg
+    | RenameMsg
+    | LeaveMsg
+    | MuteMsg
+    | MuteAllMsg
+    | AskUnmuteMsg
+    | RemoveMsg
+    | SetRoleMsg
+    | SettingsMsg
+    | AdmitMsg
+    | DenyMsg,
     Field(discriminator="type"),
 ]
 client_message = TypeAdapter(ClientMessage)

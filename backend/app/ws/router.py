@@ -7,11 +7,19 @@ from app.core.security import decode_join_token
 from app.models import MeetingStatus, MeetingType, ParticipantRole
 from app.services import live_service as live
 from app.ws.protocol import (
+    AdmitMsg,
+    AskUnmuteMsg,
     ChatMsg,
+    DenyMsg,
     JoinMsg,
     LeaveMsg,
+    MuteAllMsg,
+    MuteMsg,
     ReactionMsg,
+    RemoveMsg,
     RenameMsg,
+    SetRoleMsg,
+    SettingsMsg,
     SignalMsg,
     StateMsg,
     client_message,
@@ -44,11 +52,10 @@ async def meeting_socket(ws: WebSocket, code: str) -> None:
     claims = decode_join_token(first.token)
     if claims is None or claims.code != code:
         return await _reject(ws, "invalid_token", "Your join link has expired. Please rejoin.")
-    status = await manager.db.run(live.room_status, claims.meeting_id)
-    if status is None:
+    info = await manager.db.run(live.room_info, claims.meeting_id)
+    if info is None:
         return await _reject(ws, "meeting_not_found", "This meeting no longer exists")
-    db_status, meeting_type = status
-    if meeting_type is MeetingType.INSTANT and db_status is MeetingStatus.ENDED:
+    if info.meeting_type is MeetingType.INSTANT and info.status is MeetingStatus.ENDED:
         return await _reject(ws, "meeting_ended", "This meeting has been ended by host")
 
     is_host = first.as_host and claims.can_host
@@ -58,8 +65,9 @@ async def meeting_socket(ws: WebSocket, code: str) -> None:
         role=ParticipantRole.HOST if is_host else ParticipantRole.ATTENDEE,
         user_id=claims.user_id,
         state=first.state,
+        client_id=first.client_id,
     )
-    room = manager.room(code, claims.meeting_id)
+    room = manager.room(code, claims.meeting_id, waiting_room=info.waiting_room)
 
     handlers = {
         SignalMsg: manager.on_signal,
@@ -67,9 +75,17 @@ async def meeting_socket(ws: WebSocket, code: str) -> None:
         ChatMsg: manager.on_chat,
         ReactionMsg: manager.on_reaction,
         RenameMsg: manager.on_rename,
+        MuteMsg: manager.on_mute,
+        MuteAllMsg: manager.on_mute_all,
+        AskUnmuteMsg: manager.on_ask_unmute,
+        RemoveMsg: manager.on_remove,
+        SetRoleMsg: manager.on_set_role,
+        SettingsMsg: manager.on_settings,
+        AdmitMsg: manager.on_admit,
+        DenyMsg: manager.on_deny,
     }
     try:
-        await manager.join(room, peer, db_status)
+        await manager.join(room, peer, info.status)
         while True:
             try:
                 msg = client_message.validate_python(await ws.receive_json())

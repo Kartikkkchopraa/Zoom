@@ -3,6 +3,7 @@
 Called by the WebSocket layer (app/ws), which owns the in-memory room state.
 """
 
+from dataclasses import dataclass
 from datetime import datetime
 
 from sqlalchemy import select, update
@@ -20,9 +21,18 @@ from app.models.base import utcnow
 from app.services.meeting_service import end_room
 
 
-def room_status(db: Session, meeting_id: int) -> tuple[MeetingStatus, MeetingType] | None:
+@dataclass(frozen=True)
+class RoomInfo:
+    status: MeetingStatus
+    meeting_type: MeetingType
+    waiting_room: bool
+
+
+def room_info(db: Session, meeting_id: int) -> RoomInfo | None:
     meeting = db.get(Meeting, meeting_id)
-    return (meeting.status, meeting.meeting_type) if meeting else None
+    if meeting is None:
+        return None
+    return RoomInfo(meeting.status, meeting.meeting_type, meeting.waiting_room)
 
 
 def mark_live(db: Session, meeting_id: int) -> None:

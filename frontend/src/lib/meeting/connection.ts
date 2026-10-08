@@ -3,6 +3,7 @@
 import { api } from "@/lib/api";
 import { toast } from "@/lib/toast";
 
+import { clientId } from "./clientId";
 import { useMedia } from "./media";
 import { PeerManager, type SignalData } from "./peers";
 import { useRoom, type HostSettings, type Participant, type RemoteInfo, type Role } from "./room";
@@ -25,6 +26,12 @@ type ServerPatch = Partial<Omit<ServerPeer, "id" | "participant_id">>;
 type ServerMessage =
   | { type: "welcome"; self: ServerPeer; peers: ServerPeer[]; settings: Record<string, boolean> }
   | { type: "waiting_for_host" }
+  | { type: "waiting_room" }
+  | { type: "waiting_list"; peers: { id: string; name: string }[] }
+  | { type: "settings_updated"; settings: Record<string, boolean> }
+  | { type: "force_mute"; by: string | null }
+  | { type: "unmute_request"; by: string }
+  | { type: "removed"; message: string }
   | { type: "peer_joined"; peer: ServerPeer }
   | { type: "peer_left"; peer_id: string }
   | { type: "peer_updated"; peer_id: string; patch: ServerPatch }
@@ -153,6 +160,7 @@ export class MeetingConnection {
         name: this.join.name,
         as_host: this.join.asHost,
         state: { ...mediaState(), hand_raised: false },
+        client_id: clientId(),
       });
     ws.onmessage = (e) => this.handle(JSON.parse(e.data) as ServerMessage);
     ws.onclose = () => {
@@ -205,6 +213,30 @@ export class MeetingConnection {
       case "waiting_for_host":
         room.setStatus("waiting_host");
         break;
+      case "waiting_room":
+        room.setStatus("waiting_room");
+        break;
+      case "waiting_list": {
+        const newcomer = msg.peers.find((p) => !room.waitingList.some((w) => w.id === p.id));
+        if (newcomer) toast(`${newcomer.name} has entered the waiting room`);
+        room.setWaitingList(msg.peers);
+        break;
+      }
+      case "settings_updated":
+        room.setHost(toHostSettings(msg.settings));
+        break;
+      case "force_mute":
+        useMedia.getState().setMicMuted(true);
+        room.setUnmuteRequest(null);
+        if (msg.by) toast(`You have been muted by ${msg.by}`);
+        break;
+      case "unmute_request":
+        room.setUnmuteRequest(msg.by);
+        break;
+      case "removed":
+        room.setStatus("ended", msg.message);
+        this.teardown();
+        break;
       case "peer_joined":
         // They will call us; just show them.
         room.upsertRemote(toRemote(msg.peer));
@@ -216,6 +248,9 @@ export class MeetingConnection {
       case "peer_updated":
         if (msg.peer_id === room.self?.id) {
           const patch = toPatch(msg.patch);
+          if (patch.role && patch.role !== room.self?.role) {
+            toast(patch.role === "host" ? "You are now the host" : patch.role === "co_host" ? "You are now a co-host" : "You are no longer a co-host");
+          }
           room.setSelf({
             ...(patch.name !== undefined && { name: patch.name }),
             ...(patch.role !== undefined && { role: patch.role }),

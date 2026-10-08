@@ -4,7 +4,16 @@ import { toast } from "@/lib/toast";
 
 import { currentConnection } from "./connection";
 import { useMedia } from "./media";
-import { useRoom, type HostSettings, type Participant } from "./room";
+import { useRoom, type HostSettings, type Participant, type Role } from "./room";
+
+const SETTING_KEYS: Record<keyof HostSettings, string> = {
+  locked: "locked",
+  waitingRoom: "waiting_room",
+  allowShare: "allow_share",
+  allowChat: "allow_chat",
+  allowRename: "allow_rename",
+  allowUnmute: "allow_unmute",
+};
 
 /**
  * Everything the UI can do in a meeting. Components call these instead of
@@ -63,13 +72,50 @@ export const roomActions = {
     send({ type: "rename", name });
   },
 
-  setHostSetting(patch: Partial<HostSettings>) {
-    // Enforced server-side in Phase 7; local for now.
-    useRoom.getState().setHost(patch);
+  /** Unmute after the host asked us to (allowed even when self-unmute is off). */
+  acceptUnmuteRequest() {
+    useRoom.getState().setUnmuteRequest(null);
+    const media = useMedia.getState();
+    if (media.audioConnected) media.setMicMuted(false);
+    else void media.connectAudio().then(() => useMedia.getState().setMicMuted(false));
   },
 
-  muteAll() {
-    // Host controls are wired to the server in Phase 7.
-    toast("All participants are muted");
+  // ---- host / co-host controls (the server checks the caller's role) ---- //
+
+  setHostSetting(patch: Partial<HostSettings>) {
+    const wire = Object.fromEntries(
+      Object.entries(patch).map(([k, v]) => [SETTING_KEYS[k as keyof HostSettings], v]),
+    );
+    send({ type: "settings", patch: wire });
+  },
+
+  muteAll(allowUnmute: boolean) {
+    send({ type: "mute_all", allow_unmute: allowUnmute });
+  },
+
+  mute(peerId: string) {
+    send({ type: "mute", peer_id: peerId });
+  },
+
+  /** One participant, or (no id) everyone who is muted. */
+  askToUnmute(peerId?: string) {
+    send({ type: "ask_unmute", peer_id: peerId ?? null });
+    toast(peerId ? "Asked to unmute" : "Asked everyone to unmute");
+  },
+
+  remove(peerId: string) {
+    send({ type: "remove", peer_id: peerId });
+  },
+
+  setRole(peerId: string, role: Role) {
+    send({ type: "set_role", peer_id: peerId, role });
+  },
+
+  admit(peerId?: string) {
+    send({ type: "admit", peer_id: peerId ?? null });
+  },
+
+  deny(peerId: string) {
+    send({ type: "deny", peer_id: peerId });
   },
 };

@@ -53,6 +53,7 @@ export type ViewMode = "speaker" | "gallery";
 export type ConnectionStatus =
   | "connecting"
   | "waiting_host" // joined before the host started the meeting
+  | "waiting_room" // held until a host/co-host admits us
   | "joined"
   | "ended" // host ended it, or it ended after everyone left
   | "error";
@@ -88,6 +89,10 @@ interface RoomState {
   /** Voice activity per participant id, and whoever spoke most recently. */
   speaking: Record<string, boolean>;
   activeSpeakerId: string | null;
+  /** People in the waiting room (only sent to hosts and co-hosts). */
+  waitingList: { id: string; name: string }[];
+  /** Set when the host asks us to unmute: their name. */
+  unmuteRequestBy: string | null;
   self: SelfInfo | null;
   remote: Record<string, Participant>;
   messages: ChatMessage[];
@@ -102,6 +107,8 @@ interface RoomState {
   reset: () => void;
   setStatus: (status: ConnectionStatus, message?: string | null, retryable?: boolean) => void;
   setSpeaking: (id: string, speaking: boolean) => void;
+  setWaitingList: (list: { id: string; name: string }[]) => void;
+  setUnmuteRequest: (by: string | null) => void;
   setSelf: (patch: Partial<SelfInfo>) => void;
   setRemotes: (peers: RemoteInfo[]) => void;
   upsertRemote: (peer: RemoteInfo) => void;
@@ -125,6 +132,8 @@ const initial = {
   retryable: false,
   speaking: {} as Record<string, boolean>,
   activeSpeakerId: null as string | null,
+  waitingList: [] as { id: string; name: string }[],
+  unmuteRequestBy: null as string | null,
   self: null,
   remote: {},
   messages: [],
@@ -162,6 +171,8 @@ export const useRoom = create<RoomState>((set, get) => ({
     })),
   reset: () => set(initial),
   setStatus: (status, statusMessage = null, retryable = false) => set({ status, statusMessage, retryable }),
+  setWaitingList: (waitingList) => set({ waitingList }),
+  setUnmuteRequest: (unmuteRequestBy) => set({ unmuteRequestBy }),
   setSpeaking: (id, speaking) =>
     set((s) =>
       s.speaking[id] === speaking

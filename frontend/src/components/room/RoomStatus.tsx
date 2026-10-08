@@ -35,6 +35,18 @@ export function RoomStatus({
     );
   }
 
+  if (status === "waiting_room") {
+    return (
+      <Overlay>
+        <p className="text-lg font-semibold">Please wait, the meeting host will let you in soon.</p>
+        <p className="text-base">{meeting.title}</p>
+        <Button variant="dark" onClick={onLeave}>
+          Leave
+        </Button>
+      </Overlay>
+    );
+  }
+
   if (status === "waiting_host") {
     const start = meetingStart(meeting);
     return (

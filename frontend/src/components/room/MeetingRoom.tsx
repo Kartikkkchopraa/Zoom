@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { roomActions } from "@/lib/meeting/actions";
 import { MeetingConnection, setCurrentConnection } from "@/lib/meeting/connection";
 import { useMedia } from "@/lib/meeting/media";
 import { useParticipants } from "@/lib/meeting/participants";
@@ -11,6 +12,7 @@ import type { MeetingRoom as MeetingRoomData } from "@/lib/types";
 
 import { ChatPanel } from "./ChatPanel";
 import { EndMeetingBar } from "./EndMeetingBar";
+import { AssignHostDialog, UnmuteRequestDialog } from "./HostDialogs";
 import { ParticipantsPanel } from "./ParticipantsPanel";
 import { PermissionPrompt } from "./PermissionPrompt";
 import { RemoteAudio } from "./RemoteAudio";
@@ -47,6 +49,7 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
 
   const isHost = self?.role === "host";
   const canUseHostTools = self?.role === "host" || self?.role === "co_host";
@@ -121,6 +124,20 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
     }
   }
 
+  const others = participants.filter((p) => !p.isSelf);
+
+  /** "Leave Meeting": a host leaving others behind first picks the new host. */
+  function requestLeave() {
+    if (isHost && others.length > 0) setAssignOpen(true);
+    else void leave(false);
+  }
+
+  function assignAndLeave(peerId: string) {
+    roomActions.setRole(peerId, "host");
+    setAssignOpen(false);
+    void leave(false);
+  }
+
   const toggleFullscreen = () =>
     document.fullscreenElement
       ? void document.exitFullscreen()
@@ -161,7 +178,7 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
           isHost={isHost}
           busy={leaving}
           onEndForAll={() => void leave(true)}
-          onLeave={() => void leave(false)}
+          onLeave={requestLeave}
           onCancel={() => setEndOpen(false)}
         />
       ) : (
@@ -177,6 +194,13 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
       )}
 
       <RemoteAudio participants={participants} />
+      <UnmuteRequestDialog />
+      <AssignHostDialog
+        open={assignOpen}
+        candidates={others}
+        onCancel={() => setAssignOpen(false)}
+        onAssign={assignAndLeave}
+      />
       <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <InviteDialog meeting={meeting} open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
