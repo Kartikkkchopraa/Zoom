@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { CalendarPlus, ChevronLeft, RotateCw } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 
 import { MeetingDetail } from "@/components/meetings/MeetingDetail";
 import { MeetingList } from "@/components/meetings/MeetingList";
@@ -31,6 +31,8 @@ function MeetingsView() {
 
   const { data: me } = useMe();
   const { data: meetings = [], isPending, isFetching } = useMeetings(tab);
+  // The URL still holds a deleted meeting's id until navigation settles; don't refetch it.
+  const [deletedId, setDeletedId] = useState<number | null>(null);
   const pmi = tab === "upcoming" ? me?.personal_meeting : undefined;
 
   // Default selection: the PMI on Upcoming, the most recent meeting on Previous.
@@ -40,7 +42,7 @@ function MeetingsView() {
   const { data: fetched } = useQuery({
     queryKey: queryKeys.meeting(selectedId ?? 0),
     queryFn: () => api.getMeeting(selectedId!),
-    enabled: selectedId !== null && !fromLists && !isPending,
+    enabled: selectedId !== null && selectedId !== deletedId && !fromLists && !isPending,
   });
   const selected = fromLists ?? fetched;
 
@@ -139,7 +141,10 @@ function MeetingsView() {
             key={selected.id}
             meeting={selected}
             currentUserId={me?.user.id}
-            onDeleted={() => navigate({ id: null })}
+            onDeleted={() => {
+              setDeletedId(selected.id);
+              navigate({ id: null });
+            }}
           />
         )}
       </section>

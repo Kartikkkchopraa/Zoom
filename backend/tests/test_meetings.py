@@ -182,6 +182,22 @@ def test_update_keeps_and_changes_invitees(client):
     assert changed["invitees"] == ["b@example.com", "c@example.com"]
 
 
+def test_update_rejects_moving_meeting_into_past(client, db):
+    created = _schedule(client).json()
+    url = f"/api/meetings/{created['id']}"
+
+    res = client.patch(url, json={"start_time": _future(-5)})
+    assert res.json()["error"]["code"] == "start_in_past"
+
+    # A meeting already under way can still be renamed (same start time resent).
+    meeting = db.get(Meeting, created["id"])
+    meeting.scheduled_start = datetime.now(UTC) - timedelta(minutes=10)
+    db.commit()
+    same_start = meeting.scheduled_start.isoformat()
+    res = client.patch(url, json={"title": "Renamed", "start_time": same_start})
+    assert res.status_code == 200
+
+
 def test_personal_room_cannot_be_deleted(client):
     pmi_id = client.get("/api/users/me").json()["personal_meeting"]["id"]
     assert client.delete(f"/api/meetings/{pmi_id}").json()["error"]["code"] == "not_deletable"

@@ -60,6 +60,11 @@ def _to_utc(value: datetime, tz_name: str) -> datetime:
     return value.astimezone(ZoneInfo("UTC"))
 
 
+def _ensure_not_past(start: datetime) -> None:
+    if start < utcnow() - _START_GRACE:
+        raise BadRequestError("start_in_past", "Meeting start time can't be in the past")
+
+
 def _participant_counts(db: Session, meeting_ids: list[int]) -> dict[int, int]:
     if not meeting_ids:
         return {}
@@ -247,8 +252,7 @@ def create_instant(db: Session, user: User, use_pmi: bool) -> MeetingOut:
 
 def schedule(db: Session, user: User, data: MeetingCreate) -> MeetingOut:
     start = _to_utc(data.start_time, data.timezone)
-    if start < utcnow() - _START_GRACE:
-        raise BadRequestError("start_in_past", "Meeting start time can't be in the past")
+    _ensure_not_past(start)
 
     meeting = Meeting(
         host=user,
@@ -293,7 +297,11 @@ def update_meeting(db: Session, user: User, meeting_id: int, data: MeetingUpdate
     if "timezone" in changes:
         meeting.timezone = changes.pop("timezone")
     if "start_time" in changes:
-        meeting.scheduled_start = _to_utc(changes.pop("start_time"), meeting.timezone)
+        start = _to_utc(changes.pop("start_time"), meeting.timezone)
+        # The edit form always resends the time; only validate an actual change.
+        if start != meeting.scheduled_start:
+            _ensure_not_past(start)
+        meeting.scheduled_start = start
     if "passcode" in changes:
         # Clearing the passcode is not allowed, matching Zoom's enforced passcodes.
         meeting.passcode = changes.pop("passcode") or meeting.passcode
