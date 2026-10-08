@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
 from app.core.errors import AppError, BadRequestError, ForbiddenError, NotFoundError
+from app.core.security import create_join_token
 from app.models import (
     Meeting,
     MeetingInvitee,
@@ -336,6 +337,15 @@ def start_meeting(db: Session, user: User, meeting_id: int) -> MeetingOut:
 
 def end_meeting(db: Session, user: User, meeting_id: int) -> MeetingOut:
     meeting = _get_hosted(db, user, meeting_id)
+    end_room(db, meeting)
+    return serialize_many(db, [meeting])[0]
+
+
+def end_room(db: Session, meeting: Meeting) -> str:
+    """End a meeting and everything sharing its room; returns the room's code.
+
+    Used by the host's "End Meeting for All" and when a live room empties.
+    """
     room = room_of(meeting)
     now = utcnow()
 
@@ -346,7 +356,7 @@ def end_meeting(db: Session, user: User, meeting_id: int) -> MeetingOut:
         to_end.update(
             db.scalars(
                 select(Meeting).where(
-                    Meeting.host_id == user.id,
+                    Meeting.host_id == room.host_id,
                     Meeting.use_pmi.is_(True),
                     Meeting.status == MeetingStatus.LIVE,
                 )
@@ -371,7 +381,7 @@ def end_meeting(db: Session, user: User, meeting_id: int) -> MeetingOut:
         .values(left_at=now)
     )
     db.commit()
-    return serialize_many(db, [meeting])[0]
+    return room.meeting_code
 
 
 def join_check(db: Session, user: User, raw: str, passcode: str | None) -> MeetingRoomOut:
@@ -399,7 +409,10 @@ def join_check(db: Session, user: User, raw: str, passcode: str | None) -> Meeti
             raise ForbiddenError("wrong_passcode", "Incorrect meeting passcode. Please try again.")
 
     out = serialize_many(db, [room])[0]
-    return MeetingRoomOut(**out.model_dump(), is_host=is_host)
+    token = create_join_token(
+        meeting_id=room.id, code=room.meeting_code, user_id=user.id, can_host=is_host
+    )
+    return MeetingRoomOut(**out.model_dump(), is_host=is_host, join_token=token)
 
 
 def invitation_text(db: Session, user: User, meeting_id: int) -> str:

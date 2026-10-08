@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Query, status
+from starlette.concurrency import run_in_threadpool
 
 from app.core.deps import CurrentUser, DbSession
 from app.schemas.meeting import (
@@ -14,6 +15,7 @@ from app.schemas.meeting import (
     MeetingUpdate,
 )
 from app.services import meeting_service
+from app.ws.room import manager
 
 router = APIRouter(prefix="/api/meetings", tags=["meetings"])
 
@@ -77,5 +79,8 @@ def start(db: DbSession, user: CurrentUser, meeting_id: int):
 
 
 @router.post("/{meeting_id}/end", response_model=MeetingOut)
-def end(db: DbSession, user: CurrentUser, meeting_id: int):
-    return meeting_service.end_meeting(db, user, meeting_id)
+async def end(db: DbSession, user: CurrentUser, meeting_id: int):
+    """End Meeting for All: closes the meeting and disconnects everyone in it."""
+    ended = await run_in_threadpool(meeting_service.end_meeting, db, user, meeting_id)
+    await manager.end(ended.meeting_code)
+    return ended

@@ -58,6 +58,7 @@ export default function BrowserJoinPage({
         passcode: needsPasscode ? passcode : undefined,
         joinAudio: true,
         videoOn: true,
+        asHost: false,
       });
       router.push(`/wc/${code}`);
     } catch (err) {

@@ -2,19 +2,27 @@
 
 import { toast } from "@/lib/toast";
 
+import { currentConnection } from "./connection";
 import { useMedia } from "./media";
 import { useRoom, type HostSettings, type Participant } from "./room";
 
 /**
  * Everything the UI can do in a meeting. Components call these instead of
- * touching stores directly, so Phase 5 can route them over the signaling
- * WebSocket without changing any component.
+ * touching stores or the socket directly.
+ *
+ * Mic/camera/share only change local media: the connection observes the
+ * media store and tells peers. Chat, reactions and renames go to the server,
+ * which echoes them back to everyone (including us) so ordering is shared.
  */
+
+const send = (message: Record<string, unknown>) => currentConnection()?.send(message);
+const isAttendee = () => useRoom.getState().self?.role === "attendee";
+
 export const roomActions = {
   toggleMic() {
     const media = useMedia.getState();
     if (!media.audioConnected) return void media.connectAudio();
-    if (media.micMuted && !useRoom.getState().host.allowUnmute && useRoom.getState().self?.role === "attendee") {
+    if (media.micMuted && isAttendee() && !useRoom.getState().host.allowUnmute) {
       return toast("The host has disabled unmuting");
     }
     media.setMicMuted(!media.micMuted);
@@ -28,47 +36,40 @@ export const roomActions = {
   async toggleShare() {
     const media = useMedia.getState();
     if (media.screenTrack) return media.stopShare();
-    const room = useRoom.getState();
-    if (!room.host.allowShare && room.self?.role === "attendee") {
+    if (isAttendee() && !useRoom.getState().host.allowShare) {
       return toast("The host has disabled screen sharing");
     }
+    const sharer = Object.values(useRoom.getState().remote).find((p) => p.sharing);
+    if (sharer) return toast(`${sharer.name} is already sharing their screen`);
     await media.startShare();
   },
 
   sendChat(body: string, recipient: Participant | null) {
-    const { self, addMessage } = useRoom.getState();
-    if (!self) return;
-    addMessage({
-      id: crypto.randomUUID(),
-      senderId: self.id,
-      senderName: self.name,
-      recipientId: recipient?.id ?? null,
-      recipientName: recipient?.name,
-      body,
-      sentAt: Date.now(),
-    });
+    send({ type: "chat", body, to: recipient?.id ?? null });
   },
 
   toggleHand() {
     const { self, setSelf } = useRoom.getState();
-    if (self) setSelf({ handRaised: !self.handRaised });
+    if (!self) return;
+    setSelf({ handRaised: !self.handRaised });
+    send({ type: "state", patch: { hand_raised: !self.handRaised } });
   },
 
   react(emoji: string) {
-    const { self, addReaction } = useRoom.getState();
-    if (self) addReaction(self.id, emoji);
+    send({ type: "reaction", emoji });
   },
 
   rename(name: string) {
-    useRoom.getState().setSelf({ name });
+    send({ type: "rename", name });
   },
 
   setHostSetting(patch: Partial<HostSettings>) {
+    // Enforced server-side in Phase 7; local for now.
     useRoom.getState().setHost(patch);
   },
 
   muteAll() {
-    // Remote participants arrive in Phase 5; host controls are enforced in Phase 7.
+    // Host controls are wired to the server in Phase 7.
     toast("All participants are muted");
   },
 };

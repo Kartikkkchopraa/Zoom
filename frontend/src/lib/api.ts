@@ -68,6 +68,8 @@ export const api = {
   startMeeting: (id: number) => request<Meeting>(`/meetings/${id}/start`, { method: "POST" }),
   endMeeting: (id: number) => request<Meeting>(`/meetings/${id}/end`, { method: "POST" }),
 
+  rtcConfig: () => request<{ ice_servers: RTCIceServer[] }>("/rtc/config"),
+
   joinCheck: (meeting: string, passcode?: string) =>
     request<MeetingRoom>("/meetings/join-check", {
       method: "POST",

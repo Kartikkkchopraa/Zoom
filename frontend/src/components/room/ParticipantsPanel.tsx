@@ -174,7 +174,7 @@ function RenameForm({ initial, onClose }: { initial: string; onClose: () => void
         className="h-10 border-room-line bg-room-tile text-white"
       />
       <div className="flex justify-end gap-2 pt-5 pb-2">
-        <Button variant="secondary" className="border-0 bg-room-control text-white hover:bg-[#35363a]" onClick={onClose}>
+        <Button variant="dark" onClick={onClose}>
           Cancel
         </Button>
         <Button type="submit" disabled={!name.trim() || name.trim() === initial}>

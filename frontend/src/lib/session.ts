@@ -12,6 +12,8 @@ export interface JoinSession {
   passcode?: string;
   joinAudio: boolean;
   videoOn: boolean;
+  /** Entered via Start / New meeting (host) rather than Join. */
+  asHost: boolean;
 }
 
 interface JoinSessionState {

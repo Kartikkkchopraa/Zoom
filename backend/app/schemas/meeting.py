@@ -38,6 +38,8 @@ class MeetingRoomOut(MeetingOut):
     """Returned after a successful join check; tells the client its role."""
 
     is_host: bool
+    # Short-lived signed proof of this check, presented when opening the meeting WebSocket.
+    join_token: str
 
 
 class MeetingScope(StrEnum):

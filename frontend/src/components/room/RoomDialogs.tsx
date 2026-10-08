@@ -117,11 +117,7 @@ export function InviteDialog({ meeting, open, onClose }: { meeting: MeetingRoom;
         <p className="truncate text-[#5c8dff]">{meeting.invite_link}</p>
       </div>
       <div className="flex justify-end gap-2 pt-3 pb-2">
-        <Button
-          variant="secondary"
-          className="border-0 bg-room-control text-white hover:bg-[#35363a]"
-          onClick={() => void copyText(meeting.invite_link, "Invite link copied")}
-        >
+        <Button variant="dark" onClick={() => void copyText(meeting.invite_link, "Invite link copied")}>
           <Link2 className="size-4" /> Copy Invite Link
         </Button>
         <Button onClick={() => void copyInvitation(meeting.id)}>

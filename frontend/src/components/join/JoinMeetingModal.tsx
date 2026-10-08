@@ -57,6 +57,7 @@ export function JoinMeetingModal({ open, onClose }: { open: boolean; onClose: ()
         passcode: step === "passcode" ? passcode : undefined,
         joinAudio: !noAudio,
         videoOn: !videoOff,
+        asHost: false,
       });
       close();
     } catch (err) {

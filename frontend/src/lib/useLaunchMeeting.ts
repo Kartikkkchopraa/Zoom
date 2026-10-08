@@ -45,6 +45,7 @@ export function useLaunchMeeting() {
     credential: meeting.meeting_code,
     joinAudio: true,
     videoOn: useMeetingPrefs.getState().startWithVideo,
+    asHost: true,
   });
 
   /** "New meeting": instant meeting (or the PMI room, per the ▾ menu) as host. */
@@ -70,6 +71,7 @@ export function useLaunchMeeting() {
         credential: meeting.invite_link,
         joinAudio: true,
         videoOn: true,
+        asHost: false,
       });
     });
 

@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { forwardRef } from "react";
 
-type Variant = "primary" | "secondary" | "danger" | "ghost" | "soft";
+type Variant = "primary" | "secondary" | "danger" | "ghost" | "soft" | "dark";
 type Size = "sm" | "md" | "lg";
 
 const VARIANTS: Record<Variant, string> = {
@@ -10,6 +10,8 @@ const VARIANTS: Record<Variant, string> = {
   danger: "bg-zoom-red text-white hover:bg-[#c81f1f] disabled:bg-zoom-red/50",
   ghost: "text-zoom-blue hover:bg-zoom-blue-soft disabled:text-ink-3",
   soft: "bg-zoom-blue-soft text-zoom-blue hover:bg-[#d3ddef]",
+  // Secondary button inside the dark meeting room.
+  dark: "bg-room-control text-white hover:bg-[#35363a] disabled:text-white/40",
 };
 
 const SIZES: Record<Size, string> = {

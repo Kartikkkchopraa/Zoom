@@ -47,6 +47,8 @@ export interface Meeting {
 
 export interface MeetingRoom extends Meeting {
   is_host: boolean;
+  /** Signed proof of the join check, presented when opening the meeting WebSocket. */
+  join_token: string;
 }
 
 export interface Me {
