@@ -1,7 +1,14 @@
 import type { NextConfig } from "next";
 
+const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8000";
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  devIndicators: false,
+  // Proxy REST calls to FastAPI so the browser only ever talks to one origin
+  // (no CORS preflights, and auth cookies stay first-party).
+  async rewrites() {
+    return [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }];
+  },
 };
 
 export default nextConfig;

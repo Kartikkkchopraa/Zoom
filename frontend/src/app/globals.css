@@ -1,26 +1,45 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Zoom Workplace design tokens (sampled from the reference screenshots). */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-zoom-blue: #3c6ae8;
+  --color-zoom-blue-hover: #2f5bd6;
+  --color-zoom-blue-soft: #e0e7f3;
+  --color-zoom-orange: #f17d39;
+  --color-zoom-orange-hover: #e46e2a;
+  --color-zoom-red: #e02828;
+
+  --color-ink: #242333; /* primary text */
+  --color-ink-2: #4a4f59; /* secondary text */
+  --color-ink-3: #6e7680; /* muted text, icons */
+  --color-line: #e0e3e8; /* borders */
+  --color-shell: #f1f4f6; /* app background + left rail */
+  --color-field: #eceff1; /* search box */
+
+  /* Meeting room (dark) */
+  --color-room: #0c0c0c;
+  --color-room-tile: #1c1c1c;
+  --color-room-panel: #1f2023;
+  --color-room-line: #2e2f33;
+  --color-avatar: #27539c;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-shell);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
 }
