@@ -352,6 +352,21 @@ npx playwright test                # 15 browser tests (starts both servers itsel
 - **Removing a participant** blocks that browser and that account from rejoining the same session. The meeting owner's account is never blocked.
 - **Times are stored in UTC** and shown in the browser's time zone. The schedule form interprets times in the time zone you pick.
 
+## Deployment
+
+Production runs as two services:
+
+| Part | Host | Config |
+|---|---|---|
+| Frontend | **Vercel** (root directory `frontend`) | `BACKEND_URL=https://<backend-domain>`, `NEXT_PUBLIC_WS_URL=wss://<backend-domain>` |
+| Backend | **Railway** (root directory `backend`, `Dockerfile` + `railway.json`) | A volume mounted at `/data` and `DATABASE_URL=sqlite:////data/zoom.db` |
+| TURN relay | **Metered** | `TURN_URLS`, `TURN_USERNAME`, `TURN_CREDENTIAL` on the backend |
+
+**What happens on deploy:**
+- **Backend:** the container (`backend/start.sh`) runs the migrations, seeds the database once (only if it's empty), then starts uvicorn on `$PORT`.
+- **Backend config:** set `JWT_SECRET` (long and random), `COOKIE_SECURE=true`, and `FRONTEND_URL` / `CORS_ORIGINS` to the Vercel URL.
+- **Frontend:** Vercel forwards `/api/*` to the backend, so login cookies belong to the frontend's own domain. The meeting WebSocket connects straight to the backend and authenticates with the join token, so it needs no cookie.
+
 ## Known limitations
 
 - **About 6 people per meeting**, because of the peer-to-peer design.
