@@ -18,6 +18,9 @@ export function useSpeaking(track: MediaStreamTrack | null | undefined, enabled 
       return;
     }
     const ctx = new AudioContext();
+    // Mobile starts audio contexts suspended until a user gesture.
+    const resume = () => void ctx.resume();
+    if (ctx.state === "suspended") document.addEventListener("pointerdown", resume, { once: true });
     const source = ctx.createMediaStreamSource(new MediaStream([track]));
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 512;
@@ -39,6 +42,7 @@ export function useSpeaking(track: MediaStreamTrack | null | undefined, enabled 
     tick();
 
     return () => {
+      document.removeEventListener("pointerdown", resume);
       cancelAnimationFrame(frame);
       source.disconnect();
       void ctx.close();

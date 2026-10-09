@@ -322,7 +322,7 @@ e2e/             Playwright end-to-end tests (multi-browser meetings)
 ## Tests
 
 ```bash
-cd backend && uv run pytest        # 57 tests: REST, auth, WebSocket rooms, host controls
+cd backend && uv run pytest        # 59 tests: REST, auth, WebSocket rooms, host controls
 cd backend && uv run ruff check .  # lint
 
 cd e2e && npm install && npx playwright install chromium

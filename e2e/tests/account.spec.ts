@@ -37,9 +37,8 @@ test("default user, sign out, sign up, guest join, sign back in", async ({ newPe
   // The new account hosts; a signed-out guest joins by link.
   const code = await startInstantMeeting(page, { devices: false });
   const invite = await inviteLinkFor(page, code);
+  // A fresh device opening the invite link directly joins as a guest.
   const guest = await newPerson();
-  await guest.goto("/");
-  await guest.evaluate(() => fetch("/api/auth/logout", { method: "POST" }));
   await joinViaLink(guest, invite, "Anonymous Guest");
   await guest.getByRole("button", { name: "Continue without microphone and camera" }).click();
   await expect(guest.getByRole("link", { name: "Sign In" })).toBeVisible();

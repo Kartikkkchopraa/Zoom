@@ -15,7 +15,8 @@ export const queryKeys = {
   meeting: (id: number) => ["meetings", "detail", id] as const,
 };
 
-export const useMe = () => useQuery({ queryKey: queryKeys.me, queryFn: api.me });
+export const useMe = ({ enabled = true } = {}) =>
+  useQuery({ queryKey: queryKeys.me, queryFn: api.me, enabled });
 
 export const useMeetings = (scope: MeetingScope, limit = 50) =>
   useQuery({ queryKey: queryKeys.meetingList(scope), queryFn: () => api.listMeetings(scope, limit) });

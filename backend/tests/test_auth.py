@@ -96,3 +96,22 @@ def test_update_profile_and_settings(client):
     me = client.patch("/api/users/me/settings", json={"video_off_on_join": True}).json()
     assert me["settings"] == {"mute_mic_on_join": True, "video_off_on_join": True}
     assert client.patch("/api/users/me", json={"name": ""}).status_code == 422
+
+
+def test_default_user_fallback_becomes_a_real_session(client):
+    res = client.get("/api/users/me")
+    assert "zoom_session" in res.cookies
+    # Once signed in for real, opening an invite link keeps the account.
+    client.post("/api/auth/guest")
+    assert client.get("/api/users/me").status_code == 200
+
+
+def test_fresh_browser_opening_an_invite_link_joins_as_guest(client):
+    meeting = client.post("/api/meetings/instant").json()  # created as the default user
+
+    client.cookies.clear()  # another device: no cookies at all
+    assert client.post("/api/auth/guest").status_code == 204
+    assert client.get("/api/users/me").status_code == 401
+    res = client.post("/api/meetings/join-check", json={"meeting": meeting["invite_link"]})
+    assert res.status_code == 200
+    assert res.json()["is_host"] is False

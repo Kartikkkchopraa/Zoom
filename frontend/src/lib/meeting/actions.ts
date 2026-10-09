@@ -30,7 +30,12 @@ const isAttendee = () => useRoom.getState().self?.role === "attendee";
 export const roomActions = {
   toggleMic() {
     const media = useMedia.getState();
-    if (!media.audioConnected) return void media.connectAudio();
+    if (!media.audioConnected) {
+      return void media.connectAudio().then(() => {
+        const { error, audioConnected } = useMedia.getState();
+        if (!audioConnected) toast(error ?? "Couldn't connect your microphone", "error");
+      });
+    }
     if (media.micMuted && isAttendee() && !useRoom.getState().host.allowUnmute) {
       return toast("The host has disabled unmuting");
     }

@@ -154,7 +154,8 @@ export const useMedia = create<MediaState>((set, get) => {
     async connectAudio() {
       if (get().audioTrack) return;
       try {
-        const track = await getMic(get().micId);
+        // A remembered device id can be stale on phones; fall back to the default mic.
+        const track = await getMic(get().micId).catch(() => getMic(null));
         track.enabled = false; // join muted, like Zoom
         set({ audioTrack: track, audioConnected: true, micMuted: true, permission: "granted", error: null });
         await refreshDevices();

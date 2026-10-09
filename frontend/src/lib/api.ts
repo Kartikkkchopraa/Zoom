@@ -54,6 +54,7 @@ export const api = {
   signup: (name: string, email: string, password: string) =>
     request<Me>("/auth/signup", { method: "POST", body: json({ name, email, password }) }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
+  continueAsGuest: () => request<void>("/auth/guest", { method: "POST" }),
   updateMe: (patch: { name?: string }) =>
     request<Me>("/users/me", { method: "PATCH", body: json(patch) }),
   updateSettings: (patch: Partial<UserSettings>) =>

@@ -1,8 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.deps import CurrentUser, DbSession
+from app.core.session import start_session
 from app.models import User
 from app.schemas.meeting import MeetingOut
 from app.schemas.user import UserOut, UserSettingsOut, UserSettingsUpdate, UserUpdate
@@ -26,7 +27,11 @@ def build_me(db: Session, user: User) -> MeOut:
 
 
 @router.get("/me", response_model=MeOut)
-def me(db: DbSession, user: CurrentUser):
+def me(db: DbSession, user: CurrentUser, request: Request, response: Response):
+    # Opening the app without a session signs this browser in as the default
+    # user for real, so invite links opened here later keep that identity.
+    if getattr(request.state, "default_user", False):
+        start_session(response, user)
     return build_me(db, user)
 
 

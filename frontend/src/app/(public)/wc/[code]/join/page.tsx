@@ -9,6 +9,7 @@ import { Checkbox, Input } from "@/components/ui/Form";
 import { api, ApiError } from "@/lib/api";
 import { useMe } from "@/lib/queries";
 import { useJoinSessions, useRememberedName } from "@/lib/session";
+import { useGuestEntry } from "@/lib/useGuestEntry";
 
 /** Web-client join page: display name (and passcode if the link has none). */
 export default function BrowserJoinPage({
@@ -21,7 +22,8 @@ export default function BrowserJoinPage({
   const { code } = use(params);
   const { pwd } = use(searchParams);
   const router = useRouter();
-  const { data: me } = useMe();
+  const guestReady = useGuestEntry();
+  const { data: me } = useMe({ enabled: guestReady });
   const remembered = useRememberedName();
   const saveSession = useJoinSessions((s) => s.save);
 
@@ -32,6 +34,7 @@ export default function BrowserJoinPage({
   const check = useQuery({
     queryKey: ["join-check", credential],
     queryFn: () => api.joinCheck(credential),
+    enabled: guestReady,
     retry: false,
   });
   const errorCode = check.error instanceof ApiError ? check.error.code : null;
@@ -72,7 +75,7 @@ export default function BrowserJoinPage({
       <form onSubmit={submit} className="flex w-full max-w-[400px] flex-col gap-5">
         <h1 className="text-center text-2xl font-semibold">Join Meeting</h1>
 
-        {check.isPending && <div className="h-40 animate-pulse rounded-lg bg-shell" />}
+        {(!guestReady || check.isPending) && <div className="h-40 animate-pulse rounded-lg bg-shell" />}
 
         {fatal && (
           <div role="alert" className="rounded-lg border border-zoom-red/30 bg-[#fdf1f1] px-4 py-3 text-center text-sm text-zoom-red">

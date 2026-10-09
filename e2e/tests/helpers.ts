@@ -29,6 +29,35 @@ export const test = base.extend<{ newPerson: (viewport?: Viewport) => Promise<Pa
   },
 });
 
+/**
+ * Make audio behave like iOS Safari: play() only works *during* a tap and the
+ * autoplay attribute is ignored. Used to test the "Tap to turn on sound" path.
+ */
+export async function simulateIOSAudioRules(page: Page): Promise<void> {
+  await page.context().addInitScript(() => {
+    const w = window as typeof window & { __inTap?: boolean };
+    for (const type of ["pointerdown", "click"]) {
+      window.addEventListener(type, () => {
+        w.__inTap = true;
+        setTimeout(() => (w.__inTap = false));
+      }, true);
+    }
+    Object.defineProperty(HTMLMediaElement.prototype, "autoplay", { get: () => false, set: () => {} });
+    const setAttribute = Element.prototype.setAttribute;
+    Element.prototype.setAttribute = function (name: string, value: string) {
+      if (this instanceof HTMLAudioElement && name.toLowerCase() === "autoplay") return;
+      return setAttribute.call(this, name, value);
+    };
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () {
+      if (this instanceof HTMLAudioElement && !w.__inTap) {
+        return Promise.reject(new DOMException("play() requires a user gesture", "NotAllowedError"));
+      }
+      return play.call(this);
+    };
+  });
+}
+
 /** Home → New meeting; returns the meeting code. */
 export async function startInstantMeeting(page: Page, { devices = true } = {}): Promise<string> {
   await page.goto("/");

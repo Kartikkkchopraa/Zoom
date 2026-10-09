@@ -8,20 +8,19 @@ from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.errors import AppError
 from app.core.security import decode_session_token
+from app.core.session import SESSION_COOKIE, SIGNED_OUT_COOKIE
 from app.models import User
 
 DbSession = Annotated[Session, Depends(get_db)]
-
-SESSION_COOKIE = "zoom_session"
-# Set on sign-out so we stop falling back to the default user.
-SIGNED_OUT_COOKIE = "zoom_signed_out"
 
 
 def get_optional_user(request: Request, db: DbSession) -> User | None:
     """The signed-in user, or None for a signed-out visitor (e.g. a guest joining by link).
 
     The assignment assumes a default user is logged in, so a browser that has
-    never signed in or out is treated as the seeded default user.
+    never signed in, signed out or joined as a guest is treated as the seeded
+    default user (flagged on request.state so /users/me can turn it into a
+    real session).
     """
     token = request.cookies.get(SESSION_COOKIE)
     if token:
@@ -32,6 +31,7 @@ def get_optional_user(request: Request, db: DbSession) -> User | None:
     user = db.scalar(select(User).where(User.email == get_settings().default_user_email))
     if user is None:
         raise AppError(500, "no_default_user", "Default user missing - run `python -m app.seed`")
+    request.state.default_user = True
     return user
 
 

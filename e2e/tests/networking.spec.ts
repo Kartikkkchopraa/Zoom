@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { endMeetingForAll, expect, inviteLinkFor, joinViaLink, liveVideoCount, participantRow, startInstantMeeting, test } from "./helpers";
+import { endMeetingForAll, expect, inviteLinkFor, joinViaLink, liveVideoCount, participantRow, simulateIOSAudioRules, startInstantMeeting, test } from "./helpers";
 
 /** Two real browsers in one meeting: WebRTC media plus WebSocket signaling. */
 
@@ -105,4 +105,35 @@ test("host can end for all even after another tab switched accounts", async ({ n
 
   await endMeetingForAll(host);
   await expect(guest.getByText("This meeting has been ended by host")).toBeVisible();
+});
+
+test("a fresh device joining by link is a guest, and blocked audio can be turned on", async ({ newPerson }) => {
+  const host = await newPerson();
+  const code = await startInstantMeeting(host);
+  const invite = await inviteLinkFor(host, code);
+
+  // A brand-new browser (like a phone) with iPhone-style audio rules.
+  const phone = await newPerson({ width: 390, height: 844 });
+  await simulateIOSAudioRules(phone);
+  await joinViaLink(phone, invite, "Phone Guest");
+  await phone.getByRole("button", { name: "Use microphone and camera" }).click();
+
+  // Not signed in as the demo account.
+  await expect(phone.getByRole("link", { name: "Sign In" })).toBeVisible();
+  expect(await phone.evaluate(async () => (await fetch("/api/users/me")).status)).toBe(401);
+
+  // Someone joins while the phone sits idle: their audio can't autoplay...
+  const late = await newPerson();
+  await joinViaLink(late, invite, "Late Joiner");
+  await late.getByRole("button", { name: "Use microphone and camera" }).click();
+  const sound = phone.getByRole("button", { name: /turn on sound/i });
+  await expect(sound).toBeVisible();
+
+  // ...until the phone taps the prompt.
+  await sound.click();
+  await expect(sound).toBeHidden();
+  await expect
+    .poll(() => phone.evaluate(() => [...document.querySelectorAll("audio")].every((a) => !a.paused)))
+    .toBe(true);
+  await endMeetingForAll(host);
 });

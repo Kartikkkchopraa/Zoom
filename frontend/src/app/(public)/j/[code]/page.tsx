@@ -5,6 +5,7 @@ import Link from "next/link";
 import { use, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
+import { useGuestEntry } from "@/lib/useGuestEntry";
 
 /** Invite-link landing page: "Join from Zoom Workplace app" / "Join from browser". */
 export default function InviteLandingPage({
@@ -17,6 +18,7 @@ export default function InviteLandingPage({
   const { code } = use(params);
   const { pwd } = use(searchParams);
   const [hintOpen, setHintOpen] = useState(true);
+  useGuestEntry(); // a device without a session joins as a guest
   const browserHref = `/wc/${code}/join${pwd ? `?pwd=${encodeURIComponent(pwd)}` : ""}`;
 
   return (
