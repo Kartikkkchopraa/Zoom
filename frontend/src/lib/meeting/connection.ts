@@ -240,12 +240,9 @@ export class MeetingConnection {
       case "waiting_room":
         room.setStatus("waiting_room");
         break;
-      case "waiting_list": {
-        const newcomer = msg.peers.find((p) => !room.waitingList.some((w) => w.id === p.id));
-        if (newcomer) toast(`${newcomer.name} has entered the waiting room`);
+      case "waiting_list": // shown to hosts by WaitingRoomBanner
         room.setWaitingList(msg.peers);
         break;
-      }
       case "settings_updated":
         room.setHost(toHostSettings(msg.settings));
         break;

@@ -23,6 +23,7 @@ import { RoomHeader } from "./RoomHeader";
 import { RoomStatus } from "./RoomStatus";
 import { Toolbar } from "./Toolbar";
 import { VideoStage } from "./VideoStage";
+import { WaitingRoomBanner } from "./WaitingRoomBanner";
 
 interface MeetingRoomProps {
   meeting: MeetingRoomData;
@@ -94,13 +95,18 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
   }, [status, retryable]);
 
   // Devices and room state outlive reconnects; release them only when the room unmounts.
-  useEffect(
-    () => () => {
-      useMedia.getState().stopAll();
-      useRoom.getState().reset();
-    },
-    [],
-  );
+  // Deferred a tick so a remount (React's dev double-mount) keeps the devices the
+  // join page already turned on.
+  const releaseTimer = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    window.clearTimeout(releaseTimer.current);
+    return () => {
+      releaseTimer.current = window.setTimeout(() => {
+        useMedia.getState().stopAll();
+        useRoom.getState().reset();
+      });
+    };
+  }, []);
 
   useEffect(() => {
     const onChange = () => setFullscreen(document.fullscreenElement === containerRef.current);
@@ -171,6 +177,7 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
 
       <div className="relative flex min-h-0 flex-1">
         <VideoStage participants={participants} />
+        {status === "joined" && canUseHostTools && <WaitingRoomBanner />}
         {status === "joined" && permission === "prompt" && (
           <PermissionPrompt
             onAllow={allowDevices}

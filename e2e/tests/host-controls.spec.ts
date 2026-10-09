@@ -1,4 +1,4 @@
-import { expect, inviteLinkFor, joinViaLink, participantRow, startInstantMeeting, test } from "./helpers";
+import { endMeetingForAll, expect, inviteLinkFor, joinViaLink, participantRow, startInstantMeeting, test } from "./helpers";
 
 /** Host and co-host moderation, all enforced by the server. */
 
@@ -9,7 +9,6 @@ test("mute, ask to unmute, mute all, co-host, waiting room, remove, lock, hand o
 
   const guest = await newPerson();
   await joinViaLink(guest, invite, "Guest Tester");
-  await guest.getByRole("button", { name: "Use microphone and camera" }).click();
   await guest.getByRole("button", { name: "Unmute", exact: true }).click();
   await host.getByRole("button", { name: "Participants", exact: true }).click();
   const guestRow = participantRow(host, "Guest Tester");
@@ -52,7 +51,7 @@ test("mute, ask to unmute, mute all, co-host, waiting room, remove, lock, hand o
     await expect(third.getByText("Please wait, the meeting host will let you in soon.")).toBeVisible();
     await expect(host.getByText("Waiting Room (1)")).toBeVisible();
     await participantRow(host, "Third Person").getByRole("button", { name: "Admit" }).click();
-    await expect(third.getByRole("button", { name: "Use microphone and camera" })).toBeVisible();
+    await expect(third.getByRole("button", { name: "Participants", exact: true })).toBeVisible();
   });
 
   await test.step("remove, and the removed browser can't rejoin", async () => {
@@ -85,4 +84,26 @@ test("mute, ask to unmute, mute all, co-host, waiting room, remove, lock, hand o
     await guest.getByRole("button", { name: "End", exact: true }).click();
     await expect(guest.getByRole("button", { name: "End Meeting for All" })).toBeVisible();
   });
+});
+
+test("hosts get a waiting room prompt to admit people", async ({ newPerson }) => {
+  const host = await newPerson();
+  const code = await startInstantMeeting(host, { devices: false });
+  const invite = await inviteLinkFor(host, code);
+  await host.getByRole("button", { name: "Participants", exact: true }).click();
+  await host.locator("aside").getByRole("button", { name: "More", exact: true }).click();
+  await host.getByRole("button", { name: "Enable Waiting Room" }).click();
+  await host.keyboard.press("Escape");
+  await host.getByRole("button", { name: "Participants", exact: true }).click(); // close the panel
+
+  const guest = await newPerson();
+  await joinViaLink(guest, invite, "Waiting Guest", { video: false });
+  await expect(guest.getByText("Please wait, the meeting host will let you in soon.")).toBeVisible();
+
+  const prompt = host.getByRole("status").filter({ hasText: "Waiting Guest entered the waiting room" });
+  await expect(prompt).toBeVisible();
+  await prompt.getByRole("button", { name: "Admit" }).click();
+  await expect(prompt).toBeHidden();
+  await expect(guest.getByRole("button", { name: "Participants", exact: true })).toBeVisible();
+  await endMeetingForAll(host);
 });

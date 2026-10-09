@@ -107,12 +107,11 @@ test("the same browser can't join twice; 'Join here instead' moves the host", as
 
   // Second tab, same browser (shared cookies and storage).
   const second = await first.context().newPage();
-  await joinViaLink(second, invite, "Kartik Chopra");
+  await joinViaLink(second, invite, "Kartik Chopra", { video: false });
   await expect(second.getByText("You're already in this meeting in another tab")).toBeVisible();
 
   await second.getByRole("button", { name: "Join here instead" }).click();
   await expect(first.getByText("You joined this meeting from another tab")).toBeVisible();
-  await second.getByRole("button", { name: "Continue without microphone and camera" }).click();
   await expect(second.getByRole("button", { name: "Host tools" })).toBeVisible(); // still the host
 
   // Refreshing the tab that's in the meeting just reconnects it.

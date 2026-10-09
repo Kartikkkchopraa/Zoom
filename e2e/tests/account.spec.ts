@@ -39,8 +39,7 @@ test("default user, sign out, sign up, guest join, sign back in", async ({ newPe
   const invite = await inviteLinkFor(page, code);
   // A fresh device opening the invite link directly joins as a guest.
   const guest = await newPerson();
-  await joinViaLink(guest, invite, "Anonymous Guest");
-  await guest.getByRole("button", { name: "Continue without microphone and camera" }).click();
+  await joinViaLink(guest, invite, "Anonymous Guest", { video: false });
   await expect(guest.getByRole("link", { name: "Sign In" })).toBeVisible();
   await page.getByRole("button", { name: "Participants", exact: true }).click();
   await expect(page.getByText("Neha Tester(Host, me)")).toBeVisible();

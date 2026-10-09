@@ -381,7 +381,7 @@ function CheckItem({
   );
 }
 
-function DeviceList({
+export function DeviceList({
   title,
   devices,
   selected,

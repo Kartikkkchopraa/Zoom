@@ -30,7 +30,7 @@ To try a call, start a **New meeting**, copy the invite link from **ⓘ**, and o
 |---|---|
 | **Landing dashboard** with navbar, profile/settings, New Meeting / Join / Schedule, upcoming and recent meetings | Home (`/`): live clock, the three action tiles, a day calendar with date navigation, an "Upcoming meetings" list and a "Recent meetings" list |
 | **Instant meeting:** unique ID, shareable invite link, redirect to the room | **New meeting** → 11-digit ID, passcode and `/j/<id>?pwd=<token>` link → `/wc/<id>`. The ▾ menu can start your Personal Meeting ID instead |
-| **Join meeting** by ID or invite link, display name first, meeting must exist | **Join** dialog (ID or pasted link + name, passcode step when needed), invite landing page `/j/<id>`, browser join page `/wc/<id>/join` |
+| **Join meeting** by ID or invite link, display name first, meeting must exist | **Join** dialog (ID or pasted link + name, passcode step when needed), invite landing page `/j/<id>`, browser join page `/wc/<id>/join` (Enter Meeting Info: camera preview, mic / video toggles, name) |
 | **Schedule meetings:** title/description, date-time picker, duration, auto link, stored, shown in Upcoming | Zoom's Schedule Meeting form: topic, description, date, time, AM/PM, duration, time zone, invitees, generated ID or PMI, passcode, waiting room, video defaults |
 
 ### Bonus features
@@ -41,7 +41,7 @@ To try a call, start a **New meeting**, copy the invite link from **ⓘ**, and o
   - **Muting:** mute one person, Mute All (optionally blocking self-unmute), Ask to Unmute.
   - **Removing:** remove a participant; they can't rejoin.
   - **Roles:** make or withdraw co-host, hand over host.
-  - **Meeting access:** waiting room (admit / remove / admit all) and lock meeting.
+  - **Meeting access:** waiting room (admit / remove / admit all, plus an "entered the waiting room" prompt with View / Admit) and lock meeting.
   - **Permissions:** allow participants to share, chat, rename or unmute.
   - **When the host leaves:** they choose the next host, or one is assigned automatically.
 
@@ -331,7 +331,7 @@ cd backend && uv run pytest        # 63 tests: REST, auth, WebSocket rooms, host
 cd backend && uv run ruff check .  # lint
 
 cd e2e && npm install && npx playwright install chromium
-npx playwright test                # 19 browser tests (starts both servers itself)
+npx playwright test                # 20 browser tests (starts both servers itself)
 BASE_URL=https://zoom-gamma-lemon.vercel.app npx playwright test meetings room networking host-controls
                                    # same tests against the deployed site (no reseeding)
 ```

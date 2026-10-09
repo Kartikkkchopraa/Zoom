@@ -12,7 +12,6 @@ async function hostAndGuest(newPerson: NewPerson): Promise<{ host: Page; guest: 
   const invite = await inviteLinkFor(host, code);
   const guest = await newPerson();
   await joinViaLink(guest, invite, "Guest Tester");
-  await guest.getByRole("button", { name: "Use microphone and camera" }).click();
   await expect(host.getByRole("button", { name: "Participants", exact: true })).toContainText("2");
   return { host, guest, code, invite };
 }
@@ -83,7 +82,7 @@ test("attendees wait until the host starts a scheduled meeting", async ({ newPer
 
   await host.goto(`/meetings?id=${meeting.id}`);
   await host.getByRole("button", { name: "Start", exact: true }).click();
-  await expect(guest.getByRole("button", { name: "Use microphone and camera" })).toBeVisible();
+  await expect(guest.getByRole("button", { name: "Participants", exact: true })).toBeVisible();
 
   await host.getByRole("button", { name: "Continue without microphone and camera" }).click();
   await endMeetingForAll(host);
@@ -129,7 +128,6 @@ test("a fresh device joining by link is a guest, and blocked audio can be turned
   const phone = await newPerson({ width: 390, height: 844 });
   await simulateIOSAudioRules(phone);
   await joinViaLink(phone, invite, "Phone Guest");
-  await phone.getByRole("button", { name: "Use microphone and camera" }).click();
 
   // Not signed in as the demo account.
   await expect(phone.getByRole("link", { name: "Sign In" })).toBeVisible();
@@ -138,7 +136,6 @@ test("a fresh device joining by link is a guest, and blocked audio can be turned
   // Someone joins while the phone sits idle: their audio can't autoplay...
   const late = await newPerson();
   await joinViaLink(late, invite, "Late Joiner");
-  await late.getByRole("button", { name: "Use microphone and camera" }).click();
   const sound = phone.getByRole("button", { name: /turn on sound/i });
   await expect(sound).toBeVisible();
 

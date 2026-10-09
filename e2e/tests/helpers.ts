@@ -81,10 +81,18 @@ export async function inviteLinkFor(page: Page, code: string): Promise<string> {
   }, code);
 }
 
-/** Invite link → "Join from browser" → name → Join. */
-export async function joinViaLink(page: Page, invite: string, name: string): Promise<void> {
+/**
+ * Invite link → "Join from browser" → preview page: turn the camera on and the
+ * mic off (unless `video: false`), fill the name, Join.
+ */
+export async function joinViaLink(page: Page, invite: string, name: string, { video = true } = {}): Promise<void> {
   await page.goto(invite);
   await page.getByRole("link", { name: "Join from browser" }).first().click();
+  await page.getByRole("button", { name: "Mute", exact: true }).click();
+  if (video) {
+    await page.getByRole("button", { name: "Start Video", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Stop Video", exact: true })).toBeVisible();
+  }
   await page.getByLabel("Your Name").fill(name);
   await page.getByRole("button", { name: "Join", exact: true }).click();
 }
