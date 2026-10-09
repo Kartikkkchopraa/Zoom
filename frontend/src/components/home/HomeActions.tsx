@@ -105,10 +105,11 @@ function ActionTile({
         onClick={onClick}
         disabled={disabled}
         className={clsx(
-          "flex size-14 items-center justify-center rounded-2xl transition-colors disabled:opacity-60",
+          // Lifts with a soft shadow on hover, like Zoom's Home tiles.
+          "flex size-14 items-center justify-center rounded-2xl transition-[background-color,transform,box-shadow] duration-200 hover:-translate-y-1 focus-visible:-translate-y-1 disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none",
           color === "orange"
-            ? "bg-zoom-orange hover:bg-zoom-orange-hover"
-            : "bg-zoom-blue hover:bg-zoom-blue-hover",
+            ? "bg-zoom-orange hover:bg-zoom-orange-hover hover:shadow-[0_6px_14px_rgba(255,116,46,0.4)]"
+            : "bg-zoom-blue hover:bg-zoom-blue-hover hover:shadow-[0_6px_14px_rgba(11,92,255,0.35)]",
         )}
       >
         {children}

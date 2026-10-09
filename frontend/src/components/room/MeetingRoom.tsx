@@ -1,5 +1,6 @@
 "use client";
 
+import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 
 import { api } from "@/lib/api";
@@ -8,6 +9,7 @@ import { MeetingConnection, setCurrentConnection } from "@/lib/meeting/connectio
 import { useMedia } from "@/lib/meeting/media";
 import { useParticipants } from "@/lib/meeting/participants";
 import { useRoom } from "@/lib/meeting/room";
+import { useIdleControls } from "@/lib/meeting/useIdleControls";
 import type { JoinSession } from "@/lib/session";
 import { toast } from "@/lib/toast";
 import type { MeetingRoom as MeetingRoomData } from "@/lib/types";
@@ -55,6 +57,11 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
   const [inviteOpen, setInviteOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
+
+  const controlsVisible = useIdleControls(containerRef, status !== "joined" || endOpen);
+  // Hidden bars collapse so the video gets the whole screen, like Zoom.
+  const bar = (height: string) =>
+    clsx("shrink-0 transition-[height] duration-200", controlsVisible ? height : "h-0 overflow-hidden");
 
   const isHost = self?.role === "host";
   const canUseHostTools = self?.role === "host" || self?.role === "co_host";
@@ -173,7 +180,9 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
       ref={containerRef}
       className="relative flex h-full flex-col overflow-hidden bg-room text-white max-md:fixed max-md:inset-0 max-md:z-50"
     >
-      <RoomHeader meeting={meeting} participantId={self?.participantId ? String(self.participantId) : "—"} />
+      <div data-room-bar className={bar("h-12")}>
+        <RoomHeader meeting={meeting} participantId={self?.participantId ? String(self.participantId) : "—"} />
+      </div>
 
       <div className="relative flex min-h-0 flex-1">
         <VideoStage participants={participants} />
@@ -202,24 +211,28 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
         />
       </div>
 
-      {status !== "joined" ? null : endOpen ? (
-        <EndMeetingBar
-          isHost={isHost}
-          busy={leaving}
-          onEndForAll={() => void leave(true)}
-          onLeave={requestLeave}
-          onCancel={() => setEndOpen(false)}
-        />
-      ) : (
-        <Toolbar
-          participantCount={participants.length}
-          isHost={canUseHostTools}
-          fullscreen={fullscreen}
-          onToggleFullscreen={toggleFullscreen}
-          onOpenSettings={() => setSettingsOpen(true)}
-          onInvite={() => setInviteOpen(true)}
-          onEnd={() => setEndOpen(true)}
-        />
+      {status === "joined" && (
+        <div data-room-bar className={bar("h-16")}>
+          {endOpen ? (
+            <EndMeetingBar
+              isHost={isHost}
+              busy={leaving}
+              onEndForAll={() => void leave(true)}
+              onLeave={requestLeave}
+              onCancel={() => setEndOpen(false)}
+            />
+          ) : (
+            <Toolbar
+              participantCount={participants.length}
+              isHost={canUseHostTools}
+              fullscreen={fullscreen}
+              onToggleFullscreen={toggleFullscreen}
+              onOpenSettings={() => setSettingsOpen(true)}
+              onInvite={() => setInviteOpen(true)}
+              onEnd={() => setEndOpen(true)}
+            />
+          )}
+        </div>
       )}
 
       <RemoteAudio participants={participants} />

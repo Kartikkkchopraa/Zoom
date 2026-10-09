@@ -50,6 +50,7 @@ export function Popover({
       {anchor}
       {open && (
         <div
+          data-popover
           className={clsx(
             "absolute z-50 rounded-xl border py-1.5",
             side === "bottom" ? "top-full mt-2" : "bottom-full mb-2",

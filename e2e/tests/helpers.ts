@@ -23,6 +23,8 @@ export const test = base.extend<{ newPerson: (viewport?: Viewport) => Promise<Pa
       });
       contexts.push(context);
       await context.addInitScript({ path: FAKE_MEDIA });
+      // Keep the meeting toolbar up: tests pause without moving the mouse.
+      await context.addInitScript(() => Object.assign(window, { __keepRoomControls: true }));
       return context.newPage();
     });
     await Promise.all(contexts.map((c) => c.close()));

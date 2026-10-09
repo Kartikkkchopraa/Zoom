@@ -331,7 +331,7 @@ cd backend && uv run pytest        # 63 tests: REST, auth, WebSocket rooms, host
 cd backend && uv run ruff check .  # lint
 
 cd e2e && npm install && npx playwright install chromium
-npx playwright test                # 20 browser tests (starts both servers itself)
+npx playwright test                # 21 browser tests (starts both servers itself)
 BASE_URL=https://zoom-gamma-lemon.vercel.app npx playwright test meetings room networking host-controls
                                    # same tests against the deployed site (no reseeding)
 ```
@@ -353,7 +353,7 @@ BASE_URL=https://zoom-gamma-lemon.vercel.app npx playwright test meetings room n
 - **Join tokens.** The WebSocket trusts a short-lived signed token issued by the join check, instead of re-checking passcodes. This keeps the WebSocket simple, and invite-link guests need no account.
 - **In-memory room state.** One backend process holds the live rooms, which suits SQLite and a single instance. Running several instances would mean moving this state to Redis.
 - **Default user + real auth.** With no session the default user is signed in (the assignment's rule). Signing out sets a marker that turns that off, so Sign In / Sign Up and switching accounts work properly.
-- **Zoom fidelity.** Colours were sampled from screenshots of the current Zoom Workplace web client, and the layouts, copy and flows follow it: the device prompt, toolbar, panels, End menu and waiting screens.
+- **Zoom fidelity.** Colours were sampled from screenshots of the current Zoom Workplace web client, and the layouts, copy and flows follow it: the device prompt, toolbar (which hides after 3 seconds without mouse movement), panels, End menu and waiting screens.
 
 ## Assumptions
 

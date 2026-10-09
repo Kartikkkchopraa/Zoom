@@ -120,3 +120,17 @@ test("the same browser can't join twice; 'Join here instead' moves the host", as
   await expect(second.getByRole("button", { name: "Host tools" })).toBeVisible();
   await endMeetingForAll(second);
 });
+
+test("the header and toolbar hide when the mouse is idle", async ({ newPerson }) => {
+  const page = await newPerson();
+  await page.addInitScript(() => Object.assign(window, { __keepRoomControls: false }));
+  await startInstantMeeting(page, { devices: false });
+  const toolbarHeight = async () => (await page.locator("[data-room-bar]").last().boundingBox())?.height ?? 0;
+
+  await expect.poll(toolbarHeight).toBe(64);
+  await expect.poll(toolbarHeight, { timeout: 6000 }).toBe(0); // ~3 s without moving the mouse
+  await page.mouse.move(300, 300);
+  await page.mouse.move(320, 320);
+  await expect.poll(toolbarHeight).toBe(64);
+  await endMeetingForAll(page);
+});
