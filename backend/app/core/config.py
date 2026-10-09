@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     # Session cookie: set COOKIE_SECURE=true when served over HTTPS.
     cookie_secure: bool = False
     # The account treated as logged in when no session exists (see deps.py).
-    default_user_email: str = "aryan@zoomclone.dev"
+    default_user_email: str = "kartikchopra@demo.dev"
 
     # Meeting WebSocket / WebRTC
     join_token_minutes: int = 120

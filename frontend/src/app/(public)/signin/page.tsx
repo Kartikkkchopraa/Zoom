@@ -96,7 +96,7 @@ function SignInForm() {
 
       <div className="mt-8 rounded-lg border border-[#afcaf6] bg-[#f3f8ff] px-4 py-3 text-xs text-ink-2">
         <p className="font-semibold text-ink">Demo account</p>
-        <p>aryan@zoomclone.dev / password123 (other seeded users use the same password)</p>
+        <p>kartikChopra@demo.dev / password123</p>
       </div>
     </AuthCard>
   );

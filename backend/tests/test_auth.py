@@ -7,7 +7,7 @@ from app.models import Meeting, MeetingType
 
 def test_default_user_is_signed_in_without_a_session(client):
     me = client.get("/api/users/me").json()
-    assert me["user"]["email"] == "aryan@zoomclone.dev"
+    assert me["user"]["email"] == "kartikchopra@demo.dev"
 
 
 def test_signup_creates_account_with_personal_room_and_session(client, db):
@@ -27,7 +27,7 @@ def test_signup_creates_account_with_personal_room_and_session(client, db):
 
 
 def test_signup_rejects_duplicate_email_and_weak_password(client):
-    body = {"name": "A", "email": "aryan@zoomclone.dev", "password": "secret123"}
+    body = {"name": "A", "email": "KartikChopra@demo.dev", "password": "secret123"}
     assert client.post("/api/auth/signup", json=body).json()["error"]["code"] == "email_taken"
     weak = {**body, "email": "x@example.com", "password": "short"}
     assert client.post("/api/auth/signup", json=weak).status_code == 422
@@ -66,7 +66,7 @@ def test_login_sets_session(client, db, me):
     db.commit()
     client.post("/api/auth/logout")
     res = client.post(
-        "/api/auth/login", json={"email": "ARYAN@zoomclone.dev", "password": "password123"}
+        "/api/auth/login", json={"email": "KartikChopra@DEMO.dev", "password": "password123"}
     )
     assert res.status_code == 200
     assert client.get("/api/users/me").json()["user"]["id"] == me.id
@@ -89,9 +89,9 @@ def test_a_fresh_browser_gets_the_default_user(client):
 
 
 def test_update_profile_and_settings(client):
-    me = client.patch("/api/users/me", json={"name": "  Aryan C  "}).json()
-    assert me["user"]["name"] == "Aryan C"
-    assert me["user"]["initials"] == "AC"
+    me = client.patch("/api/users/me", json={"name": "  Kartik C  "}).json()
+    assert me["user"]["name"] == "Kartik C"
+    assert me["user"]["initials"] == "KC"
 
     me = client.patch("/api/users/me/settings", json={"video_off_on_join": True}).json()
     assert me["settings"] == {"mute_mic_on_join": True, "video_off_on_join": True}

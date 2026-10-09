@@ -212,6 +212,6 @@ def test_only_host_can_modify(client, other):
 def test_invitation_text(client):
     created = _schedule(client).json()
     text = client.get(f"/api/meetings/{created['id']}/invitation").json()["text"]
-    assert "Aryan Chopra is inviting you" in text
+    assert "Kartik Chopra is inviting you" in text
     assert created["invite_link"] in text
     assert f"Passcode: {created['passcode']}" in text

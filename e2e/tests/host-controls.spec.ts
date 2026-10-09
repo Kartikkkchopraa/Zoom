@@ -17,7 +17,7 @@ test("mute, ask to unmute, mute all, co-host, waiting room, remove, lock, hand o
   await test.step("mute one participant", async () => {
     await guestRow.hover();
     await guestRow.getByRole("button", { name: "Mute", exact: true }).click();
-    await expect(guest.getByText("You have been muted by Aryan Chopra")).toBeVisible();
+    await expect(guest.getByText("You have been muted by Kartik Chopra")).toBeVisible();
   });
 
   await test.step("ask to unmute", async () => {

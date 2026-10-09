@@ -49,10 +49,10 @@ test("video flows both ways; state, chat and reactions sync", async ({ newPerson
 test("only one person can share at a time", async ({ newPerson }) => {
   const { host, guest } = await hostAndGuest(newPerson);
   await host.getByRole("button", { name: "Share", exact: true }).click();
-  await expect(guest.getByText("Aryan Chopra's screen")).toBeVisible();
+  await expect(guest.getByText("Kartik Chopra's screen")).toBeVisible();
 
   await guest.getByRole("button", { name: "Share", exact: true }).click();
-  await expect(guest.getByText("Aryan Chopra is already sharing their screen")).toBeVisible();
+  await expect(guest.getByText("Kartik Chopra is already sharing their screen")).toBeVisible();
   await expect(guest.getByText("You are screen sharing")).toHaveCount(0);
   await endMeetingForAll(host);
 });

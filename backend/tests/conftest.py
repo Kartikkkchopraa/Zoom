@@ -58,7 +58,7 @@ def make_user(db: Session, name: str, email: str) -> User:
 
 @pytest.fixture
 def me(db: Session) -> User:
-    return make_user(db, "Aryan Chopra", get_settings().default_user_email)
+    return make_user(db, "Kartik Chopra", get_settings().default_user_email)
 
 
 @pytest.fixture

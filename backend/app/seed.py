@@ -37,7 +37,7 @@ SEED_PASSWORD = "password123"
 
 USERS = [
     # (name, email, avatar colour)
-    ("Aryan Chopra", get_settings().default_user_email, "#2556A8"),
+    ("Kartik Chopra", get_settings().default_user_email, "#2556A8"),
     ("Priya Sharma", "priya@zoomclone.dev", "#7B4FD6"),
     ("Rahul Verma", "rahul@zoomclone.dev", "#0E8A6A"),
     ("Neha Gupta", "neha@zoomclone.dev", "#C2410C"),
@@ -75,7 +75,7 @@ PREVIOUS = [
             (2, "I'll draft the schema doc after this."),
         ],
     ),
-    ("Aryan Chopra's Zoom Meeting", 20, 18, 0, [3], [(3, "Thanks for the quick call!")]),
+    ("Kartik Chopra's Zoom Meeting", 20, 18, 0, [3], [(3, "Thanks for the quick call!")]),
     (
         "Weekly Product Sync",
         27,

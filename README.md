@@ -3,7 +3,7 @@
 A working clone of the **Zoom Workplace web client**: schedule and manage meetings, then
 meet with real video, audio, screen sharing, chat and host controls, all running in the browser.
 
-**Live app:** https://zoom-gamma-lemon.vercel.app (demo login `aryan@zoomclone.dev` / `password123`)
+**Live app:** https://zoom-gamma-lemon.vercel.app (demo login `kartikChopra@demo.dev` / `password123`)
 
 To try a call, start a **New meeting**, copy the invite link from **ⓘ**, and open it in an incognito window or on another device.
 
@@ -81,7 +81,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. You're signed in as **Aryan Chopra** (`aryan@zoomclone.dev` / `password123`).
+Open http://localhost:3000. You're signed in as **Kartik Chopra** (`kartikChopra@demo.dev` / `password123`).
 The other seeded users (`priya@`, `rahul@`, `neha@`, `arjun@zoomclone.dev`) use the same password.
 
 **Try a real meeting:**
@@ -102,7 +102,7 @@ Backend settings come from environment variables or `backend/.env` (see `backend
 | `CORS_ORIGINS` | `["http://localhost:3000"]` | Allowed browser origins |
 | `JWT_SECRET` | dev value | Signs session cookies and meeting join tokens. **Set a long random value in production** |
 | `COOKIE_SECURE` | `false` | Set `true` when served over HTTPS |
-| `DEFAULT_USER_EMAIL` | `aryan@zoomclone.dev` | The account used when no one is signed in |
+| `DEFAULT_USER_EMAIL` | `kartikchopra@demo.dev` | The account used when no one is signed in |
 | `EMPTY_ROOM_GRACE_SECONDS` | `30` | How long an empty live meeting waits before ending |
 | `STUN_URLS` / `TURN_URLS` / `TURN_USERNAME` / `TURN_CREDENTIAL` | Google STUN / none | ICE servers given to browsers |
 

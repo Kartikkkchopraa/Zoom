@@ -13,7 +13,7 @@ const currentUser = (page: Page) =>
 test("default user, sign out, sign up, guest join, sign back in", async ({ newPerson }) => {
   const page = await newPerson();
   await page.goto("/");
-  expect((await currentUser(page))?.email).toBe("aryan@zoomclone.dev");
+  expect((await currentUser(page))?.email).toBe("kartikchopra@demo.dev");
 
   await page.getByRole("button", { name: "Profile" }).click();
   await page.getByRole("button", { name: "Sign out" }).click();
@@ -21,7 +21,7 @@ test("default user, sign out, sign up, guest join, sign back in", async ({ newPe
   await page.goto("/meetings");
   await page.waitForURL(/\/signin\?next=%2Fmeetings/);
 
-  await page.getByLabel("Email Address").fill("aryan@zoomclone.dev");
+  await page.getByLabel("Email Address").fill("kartikchopra@demo.dev");
   await page.getByLabel("Password", { exact: true }).fill("wrong-password");
   await page.getByRole("button", { name: "Sign In" }).click();
   await expect(page.getByText("Incorrect email or password")).toBeVisible();
@@ -49,11 +49,11 @@ test("default user, sign out, sign up, guest join, sign back in", async ({ newPe
 
   await page.getByRole("button", { name: "Profile" }).click();
   await page.getByRole("button", { name: "Sign out" }).click();
-  await page.getByLabel("Email Address").fill("aryan@zoomclone.dev");
+  await page.getByLabel("Email Address").fill("kartikchopra@demo.dev");
   await page.getByLabel("Password", { exact: true }).fill("password123");
   await page.getByRole("button", { name: "Sign In" }).click();
   await page.waitForURL("/");
-  expect((await currentUser(page))?.email).toBe("aryan@zoomclone.dev");
+  expect((await currentUser(page))?.email).toBe("kartikchopra@demo.dev");
 });
 
 test("settings are saved and applied when joining", async ({ newPerson }) => {
@@ -64,11 +64,11 @@ test("settings are saved and applied when joining", async ({ newPerson }) => {
       const patch = (url: string, body: object) =>
         fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       await patch("/api/users/me/settings", { mute_mic_on_join: true, video_off_on_join: false });
-      await patch("/api/users/me", { name: "Aryan Chopra" });
+      await patch("/api/users/me", { name: "Kartik Chopra" });
     });
 
   try {
-    await page.getByLabel("Display name").fill("Aryan Chopra QA");
+    await page.getByLabel("Display name").fill("Kartik Chopra QA");
     await page.getByRole("button", { name: "Save" }).click();
     await expect(page.getByText("Profile updated")).toBeVisible();
 
