@@ -65,6 +65,7 @@ class Peer:
     user_id: int | None
     state: PeerState
     client_id: str | None = None
+    tab_id: str | None = None
     id: str = field(default_factory=lambda: uuid4().hex[:12])
     participant_id: int | None = None  # meeting_participants row, once admitted
     admitted: bool = False
@@ -72,6 +73,8 @@ class Peer:
     # when "Allow participants to unmute themselves" is off.
     unmute_invited: bool = False
     removed: bool = False
+    # Superseded by the same browser joining from another tab.
+    replaced: bool = False
 
     @property
     def is_moderator(self) -> bool:
@@ -115,6 +118,15 @@ class Room:
     live: bool = False
     ended: bool = False
     empty_timer: asyncio.Task | None = None
+    # Host/co-host roles of browsers that dropped out, restored if they come back.
+    returning_roles: dict[str, ParticipantRole] = field(default_factory=dict)
+    # Pending "host left, promote someone" (delayed so a refresh doesn't trigger it).
+    host_timer: asyncio.Task | None = None
+
+    def cancel_host_timer(self) -> None:
+        if self.host_timer:
+            self.host_timer.cancel()
+            self.host_timer = None
 
     def cancel_empty_timer(self) -> None:
         if self.empty_timer:
@@ -130,6 +142,8 @@ class RoomManager:
         self.rooms: dict[str, Room] = {}
         self.db: Db | None = None
         self.empty_grace = get_settings().empty_room_grace_seconds
+        # How long a disconnected host has to come back before someone else is promoted.
+        self.host_return_grace = 10.0
 
     def configure(self, session_factory: Callable[[], Session]) -> None:
         self.db = Db(session_factory)
@@ -179,7 +193,9 @@ class RoomManager:
 
     # ---- membership ------------------------------------------------------- #
 
-    async def join(self, room: Room, peer: Peer, db_status: MeetingStatus) -> None:
+    async def join(
+        self, room: Room, peer: Peer, db_status: MeetingStatus, take_over: bool = False
+    ) -> None:
         if (peer.client_id and peer.client_id in room.removed_clients) or (
             peer.user_id is not None and peer.user_id in room.removed_users
         ):
@@ -188,11 +204,32 @@ class RoomManager:
                 peer,
                 {"type": "removed", "message": "You have been removed from this meeting"},
             )
+        if existing := self._same_browser(room, peer):
+            # The same tab coming back (refresh, reconnect) silently replaces its
+            # old connection; another tab must ask first ("Join here instead").
+            if existing.tab_id != peer.tab_id and not take_over:
+                return await self.kick(
+                    room,
+                    peer,
+                    {
+                        "type": "error",
+                        "code": "already_in_meeting",
+                        "message": "You're already in this meeting in another tab",
+                    },
+                )
+            await self._replace(room, existing, peer)
+        elif peer.client_id in room.returning_roles:
+            self._restore_role(room, peer, room.returning_roles.pop(peer.client_id))
         if peer.role is HOST:
             if not room.live:
                 await self.db.run(live.mark_live, room.meeting_id)
                 room.live = True
+            room.cancel_host_timer()
             await self._admit(room, peer)
+            # Only one host: whoever held it while the host was away becomes co-host.
+            for other in list(room.peers.values()):
+                if other is not peer and other.role is HOST:
+                    await self._set_role(room, other, CO_HOST)
             # The host's arrival lets everyone who was waiting for them in
             # (through the waiting room, if it's on).
             waiting = list(room.waiting_for_host.values())
@@ -205,6 +242,32 @@ class RoomManager:
         else:
             room.waiting_for_host[peer.id] = peer
             await self.send(peer, {"type": "waiting_for_host"})
+
+    def _restore_role(self, room: Room, peer: Peer, role: ParticipantRole) -> None:
+        """A host/co-host reconnecting (refresh, network drop) gets their role back."""
+        if role is HOST:
+            peer.role = HOST
+        elif peer.role is ATTENDEE:
+            peer.role = role
+
+    def _same_browser(self, room: Room, peer: Peer) -> Peer | None:
+        if not peer.client_id:
+            return None
+        everyone = [
+            *room.peers.values(),
+            *room.waiting_room.values(),
+            *room.waiting_for_host.values(),
+        ]
+        return next((p for p in everyone if p.client_id == peer.client_id), None)
+
+    async def _replace(self, room: Room, old: Peer, new: Peer) -> None:
+        """Hand the old tab's place to the new one, keeping a host/co-host role."""
+        if old.is_moderator and new.role is not HOST:
+            new.role = old.role
+        old.replaced = True
+        await self.kick(
+            room, old, {"type": "replaced", "message": "You joined this meeting from another tab"}
+        )
 
     async def _enter(self, room: Room, peer: Peer) -> None:
         """A non-host arriving at a live meeting: lock and waiting room apply."""
@@ -260,15 +323,30 @@ class RoomManager:
             await self.db.run(live.close_participant, peer.participant_id, peer.removed)
             if not room.ended:
                 await self.broadcast(room, {"type": "peer_left", "peer_id": peer.id})
-                if peer.role is HOST and room.peers:
-                    await self._reassign_host(room)
-        if room.ended or room.peers:
+                if peer.is_moderator and peer.client_id and not (peer.removed or peer.replaced):
+                    room.returning_roles[peer.client_id] = peer.role
+                if peer.role is HOST and room.peers and not peer.replaced:
+                    room.cancel_host_timer()
+                    room.host_timer = asyncio.create_task(self._reassign_host_later(room))
+        # A replaced tab's successor is joining right now: don't end or drop the room.
+        if room.ended or room.peers or peer.replaced:
             return
         if room.live:
             room.cancel_empty_timer()
             room.empty_timer = asyncio.create_task(self._end_when_empty(room))
         elif not room.waiting_for_host:
             self.rooms.pop(room.code, None)
+
+    async def _reassign_host_later(self, room: Room) -> None:
+        await asyncio.sleep(self.host_return_grace)
+        room.host_timer = None
+        if room.ended or not room.peers:
+            return
+        await self._reassign_host(room)
+        # The old host no longer reclaims host on return (someone else has it now).
+        for client_id, role in list(room.returning_roles.items()):
+            if role is HOST:
+                room.returning_roles[client_id] = CO_HOST
 
     async def _reassign_host(self, room: Room) -> None:
         """The host left without ending: a co-host, else the longest-present person, takes over."""
@@ -292,6 +370,7 @@ class RoomManager:
             return
         room.ended = True
         room.cancel_empty_timer()
+        room.cancel_host_timer()
         everyone = [
             *room.peers.values(),
             *room.waiting_for_host.values(),

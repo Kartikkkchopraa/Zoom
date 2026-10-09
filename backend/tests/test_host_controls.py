@@ -159,3 +159,110 @@ def test_host_ends_meeting_over_the_socket(client, code, db):
     db.expire_all()
     meeting = db.query(Meeting).filter_by(meeting_code=code).one()
     assert meeting.status is MeetingStatus.ENDED
+
+
+def test_same_browser_in_another_tab_must_take_over(client, code):
+    with ExitStack() as stack:
+        token = client.post("/api/meetings/join-check", json={"meeting": code}).json()["join_token"]
+
+        def connect(tab: str, **extra):
+            ws = stack.enter_context(client.websocket_connect(f"/ws/meetings/{code}"))
+            ws.send_json(
+                {
+                    "type": "join",
+                    "token": token,
+                    "name": "Host",
+                    "as_host": True,
+                    "client_id": "browser-A",
+                    "tab_id": tab,
+                    **extra,
+                }
+            )
+            return ws, ws.receive_json()
+
+        tab1, first = connect("tab-1")
+        assert first["self"]["role"] == "host"
+        guest, _ = _join(client, stack, code, "Guest")
+        tab1.receive_json()  # peer_joined Guest
+
+        # A second tab of the same browser is refused...
+        _, refused = connect("tab-2")
+        assert (refused["type"], refused["code"]) == ("error", "already_in_meeting")
+
+        # ...unless it takes over: the first tab is told, the host role moves
+        # with it, and nobody else gets promoted in between.
+        tab2, welcome = connect("tab-2", take_over=True, as_host=False)
+        assert tab1.receive_json()["type"] == "replaced"
+        assert welcome["self"]["role"] == "host"
+        assert guest.receive_json()["type"] == "peer_left"
+        assert guest.receive_json()["type"] == "peer_joined"
+
+
+def test_same_tab_reconnecting_replaces_silently(client, code):
+    with ExitStack() as stack:
+        token = client.post("/api/meetings/join-check", json={"meeting": code}).json()["join_token"]
+        join = {
+            "type": "join",
+            "token": token,
+            "name": "Host",
+            "as_host": True,
+            "client_id": "browser-A",
+            "tab_id": "tab-1",
+        }
+        old = stack.enter_context(client.websocket_connect(f"/ws/meetings/{code}"))
+        old.send_json(join)
+        old.receive_json()
+
+        new = stack.enter_context(client.websocket_connect(f"/ws/meetings/{code}"))
+        new.send_json(join)  # e.g. after a page refresh
+        assert new.receive_json()["type"] == "welcome"
+        assert old.receive_json()["type"] == "replaced"
+
+
+def test_host_refreshing_keeps_the_role_and_nobody_is_promoted(client, code):
+    from app.ws.room import manager
+
+    manager.host_return_grace = 30  # the host is back well within this
+    with ExitStack() as stack:
+        token = client.post("/api/meetings/join-check", json={"meeting": code}).json()["join_token"]
+        join = {
+            "type": "join",
+            "token": token,
+            "name": "Host",
+            "as_host": False,
+            "client_id": "browser-A",
+            "tab_id": "tab-1",
+        }
+
+        # Joined via the invite link, then promoted to host by a take-over.
+        host = stack.enter_context(client.websocket_connect(f"/ws/meetings/{code}"))
+        host.send_json({**join, "as_host": True})
+        host.receive_json()
+        guest, _ = _join(client, stack, code, "Guest")
+        host.receive_json()
+
+        host.close()  # page refresh: the old socket goes away first...
+        assert guest.receive_json()["type"] == "peer_left"
+
+        again = stack.enter_context(client.websocket_connect(f"/ws/meetings/{code}"))
+        again.send_json(join)  # ...then the page rejoins, as_host False like a link join
+        assert again.receive_json()["self"]["role"] == "host"
+        # The guest only sees the host come back: no promotion in between.
+        msg = guest.receive_json()
+        assert msg["type"] == "peer_joined" and msg["peer"]["role"] == "host"
+
+
+def test_owner_reclaims_host_from_a_temporary_host(client, code):
+    with ExitStack() as stack:
+        host, guest, guest_id = _host_and_guest(client, stack, code)
+        host.send_json({"type": "leave"})
+        guest.receive_json()  # peer_left
+        assert guest.receive_json()["patch"] == {"role": "host"}  # promoted after the grace
+
+        _join(client, stack, code, "Host again", as_host=True)
+        assert guest.receive_json()["type"] == "peer_joined"
+        assert guest.receive_json() == {
+            "type": "peer_updated",
+            "peer_id": guest_id,
+            "patch": {"role": "co_host"},
+        }

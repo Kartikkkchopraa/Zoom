@@ -3,7 +3,7 @@
 Server -> client messages are plain dicts built in app/ws/room.py; their
 `type`s are: welcome, waiting_for_host, waiting_room, waiting_list,
 peer_joined, peer_left, peer_updated, settings_updated, signal, chat,
-reaction, force_mute, unmute_request, removed, denied, meeting_ended, error.
+reaction, force_mute, unmute_request, removed, replaced, meeting_ended, error.
 """
 
 from typing import Annotated, Any, Literal
@@ -37,8 +37,14 @@ class JoinMsg(BaseModel):
     # Ask for the host role; granted only if the token says this user may host.
     as_host: bool = False
     state: PeerState = Field(default_factory=PeerState)
-    # Random id stored in the browser; lets the host's "Remove" stick on rejoin.
+    # Random id stored in the browser; lets the host's "Remove" stick on rejoin
+    # and spots the same browser joining twice.
     client_id: Annotated[str, Field(max_length=64)] | None = None
+    # Random id per browser tab (survives a refresh), to tell a duplicate tab
+    # from the same tab reconnecting.
+    tab_id: Annotated[str, Field(max_length=64)] | None = None
+    # "Join here instead": replace this browser's connection in another tab.
+    take_over: bool = False
 
 
 class SignalMsg(BaseModel):

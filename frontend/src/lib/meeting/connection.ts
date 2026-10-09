@@ -3,7 +3,7 @@
 import { api } from "@/lib/api";
 import { toast } from "@/lib/toast";
 
-import { clientId } from "./clientId";
+import { clientId, tabId } from "./clientId";
 import { useMedia } from "./media";
 import { PeerManager, type SignalData } from "./peers";
 import { useRoom, type HostSettings, type Participant, type RemoteInfo, type Role } from "./room";
@@ -32,6 +32,7 @@ type ServerMessage =
   | { type: "force_mute"; by: string | null }
   | { type: "unmute_request"; by: string }
   | { type: "removed"; message: string }
+  | { type: "replaced"; message: string }
   | { type: "peer_joined"; peer: ServerPeer }
   | { type: "peer_left"; peer_id: string }
   | { type: "peer_updated"; peer_id: string; patch: ServerPatch }
@@ -119,7 +120,7 @@ export class MeetingConnection {
 
   constructor(
     private code: string,
-    private join: { token: string; name: string; asHost: boolean },
+    private join: { token: string; name: string; asHost: boolean; takeOver?: boolean },
   ) {}
 
   async start(): Promise<void> {
@@ -163,12 +164,14 @@ export class MeetingConnection {
         as_host: this.join.asHost,
         state: { ...mediaState(), hand_raised: false },
         client_id: clientId(),
+        tab_id: tabId(),
+        take_over: this.join.takeOver ?? false,
       });
     ws.onmessage = (e) => this.handle(JSON.parse(e.data) as ServerMessage);
     ws.onclose = () => {
       if (this.closed) return;
       const { status, setStatus } = useRoom.getState();
-      if (status !== "ended" && status !== "error") {
+      if (status !== "ended" && status !== "error" && status !== "duplicate") {
         // Unexpected drop (network blip, server restart): the room retries.
         setStatus("error", "You have been disconnected from the meeting.", status === "joined");
       }
@@ -255,6 +258,7 @@ export class MeetingConnection {
         room.setUnmuteRequest(msg.by);
         break;
       case "removed":
+      case "replaced": // the meeting continues in another tab of this browser
         room.setStatus("ended", msg.message);
         this.teardown();
         break;
@@ -323,7 +327,8 @@ export class MeetingConnection {
           break;
         }
         if (msg.code === "share_in_use" || msg.code === "share_disabled") useMedia.getState().stopShare();
-        if (room.status === "connecting") room.setStatus("error", msg.message);
+        if (msg.code === "already_in_meeting") room.setStatus("duplicate", msg.message);
+        else if (room.status === "connecting") room.setStatus("error", msg.message);
         else toast(msg.message, "error");
         break;
     }

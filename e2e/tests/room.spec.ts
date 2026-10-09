@@ -1,4 +1,4 @@
-import { endMeetingForAll, expect, test } from "./helpers";
+import { endMeetingForAll, expect, inviteLinkFor, joinViaLink, startInstantMeeting, test } from "./helpers";
 
 /** The meeting room UI with a single participant. */
 
@@ -98,4 +98,26 @@ test("camera allowed but microphone blocked: keeps video and explains", async ({
   await page.getByRole("button", { name: "Join Audio", exact: true }).click();
   await expect(page.getByText("Access to your microphone is blocked").first()).toBeVisible();
   await endMeetingForAll(page);
+});
+
+test("the same browser can't join twice; 'Join here instead' moves the host", async ({ newPerson }) => {
+  const first = await newPerson();
+  const code = await startInstantMeeting(first, { devices: false });
+  const invite = await inviteLinkFor(first, code);
+
+  // Second tab, same browser (shared cookies and storage).
+  const second = await first.context().newPage();
+  await joinViaLink(second, invite, "Kartik Chopra");
+  await expect(second.getByText("You're already in this meeting in another tab")).toBeVisible();
+
+  await second.getByRole("button", { name: "Join here instead" }).click();
+  await expect(first.getByText("You joined this meeting from another tab")).toBeVisible();
+  await second.getByRole("button", { name: "Continue without microphone and camera" }).click();
+  await expect(second.getByRole("button", { name: "Host tools" })).toBeVisible(); // still the host
+
+  // Refreshing the tab that's in the meeting just reconnects it.
+  await second.reload();
+  await second.getByRole("button", { name: "Continue without microphone and camera" }).click();
+  await expect(second.getByRole("button", { name: "Host tools" })).toBeVisible();
+  await endMeetingForAll(second);
 });

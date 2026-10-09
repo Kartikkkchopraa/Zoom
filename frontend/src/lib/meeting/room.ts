@@ -54,6 +54,7 @@ export type ConnectionStatus =
   | "connecting"
   | "waiting_host" // joined before the host started the meeting
   | "waiting_room" // held until a host/co-host admits us
+  | "duplicate" // this browser is already in the meeting in another tab
   | "joined"
   | "ended" // host ended it, or it ended after everyone left
   | "error";

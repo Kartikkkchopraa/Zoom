@@ -158,9 +158,14 @@ flowchart LR
    - **Meeting not started yet:** attendees see "Please wait for the host" until the host arrives.
    - **Waiting room on:** they wait until a host admits them.
    - **Meeting locked:** new joiners are turned away.
-4. **In the meeting:**
+4. **One connection per browser:**
+   - A second tab of the same browser is told "You're already in this meeting in another tab" and can choose **Join here instead**, which moves you, host role included.
+   - Refreshing a tab just reconnects it, keeping your role.
+   - If the host drops out, the host role passes to someone else only after 10 s, so a refresh doesn't hand it away.
+   - The meeting owner rejoining reclaims host; the temporary host becomes co-host.
+5. **In the meeting:**
    - The server keeps each live room in memory and records attendance (`meeting_participants`) and chat (`chat_messages`) in SQLite.
-5. **Ending:**
+6. **Ending:**
    - **End Meeting for All** disconnects everyone.
    - A room nobody is in ends after 30 s; the delay stops a page refresh from ending the meeting.
    - When the server restarts, any meetings still marked live are closed.
@@ -322,11 +327,11 @@ e2e/             Playwright end-to-end tests (multi-browser meetings)
 ## Tests
 
 ```bash
-cd backend && uv run pytest        # 59 tests: REST, auth, WebSocket rooms, host controls
+cd backend && uv run pytest        # 63 tests: REST, auth, WebSocket rooms, host controls
 cd backend && uv run ruff check .  # lint
 
 cd e2e && npm install && npx playwright install chromium
-npx playwright test                # 17 browser tests (starts both servers itself)
+npx playwright test                # 18 browser tests (starts both servers itself)
 BASE_URL=https://zoom-gamma-lemon.vercel.app npx playwright test meetings room networking host-controls
                                    # same tests against the deployed site (no reseeding)
 ```

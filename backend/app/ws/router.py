@@ -67,6 +67,7 @@ async def meeting_socket(ws: WebSocket, code: str) -> None:
         user_id=claims.user_id,
         state=first.state,
         client_id=first.client_id,
+        tab_id=first.tab_id,
     )
     room = manager.room(code, claims.meeting_id, info.host_id, waiting_room=info.waiting_room)
 
@@ -87,7 +88,7 @@ async def meeting_socket(ws: WebSocket, code: str) -> None:
         EndMsg: manager.on_end,
     }
     try:
-        await manager.join(room, peer, info.status)
+        await manager.join(room, peer, info.status, take_over=first.take_over)
         while True:
             try:
                 msg = client_message.validate_python(await ws.receive_json())

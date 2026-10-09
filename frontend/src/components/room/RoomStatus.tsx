@@ -17,12 +17,14 @@ export function RoomStatus({
   meeting,
   onLeave,
   onRejoin,
+  onTakeOver,
 }: {
   status: ConnectionStatus;
   message: string | null;
   meeting: MeetingRoom;
   onLeave: () => void;
   onRejoin: () => void;
+  onTakeOver: () => void;
 }) {
   if (status === "joined") return null;
 
@@ -31,6 +33,23 @@ export function RoomStatus({
       <Overlay>
         <Loader2 className="size-8 animate-spin text-white/70" />
         <p className="text-sm text-white/70">Connecting to the meeting…</p>
+      </Overlay>
+    );
+  }
+
+  if (status === "duplicate") {
+    return (
+      <Overlay>
+        <p className="text-lg font-semibold">You&apos;re already in this meeting in another tab</p>
+        <p className="max-w-sm text-center text-sm text-white/70">
+          Joining here will disconnect the other tab. You&apos;ll keep your host controls.
+        </p>
+        <div className="flex gap-2">
+          <Button variant="dark" onClick={onLeave}>
+            Back to Home
+          </Button>
+          <Button onClick={onTakeOver}>Join here instead</Button>
+        </div>
       </Overlay>
     );
   }

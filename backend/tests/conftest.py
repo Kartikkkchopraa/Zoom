@@ -72,6 +72,7 @@ def client(db: Session, me: User, session_factory: sessionmaker[Session]) -> Ite
     app.state.session_factory = session_factory
     manager.rooms.clear()
     manager.empty_grace = 0
+    manager.host_return_grace = 0
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

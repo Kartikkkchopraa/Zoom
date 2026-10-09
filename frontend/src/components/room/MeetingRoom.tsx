@@ -46,7 +46,8 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
   const self = useRoom((s) => s.self);
   const participants = useParticipants();
 
-  const [attempt, setAttempt] = useState(0); // bumped by "Rejoin"
+  const [attempt, setAttempt] = useState(0); // bumped by "Rejoin" / "Join here instead"
+  const [takeOver, setTakeOver] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -70,6 +71,7 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
       token: meeting.join_token,
       name: session.displayName,
       asHost: session.asHost,
+      takeOver,
     });
     connectionRef.current = connection;
     setCurrentConnection(connection);
@@ -79,7 +81,7 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
       setCurrentConnection(null);
       connectionRef.current = null;
     };
-  }, [meeting, session.displayName, session.asHost, attempt]);
+  }, [meeting, session.displayName, session.asHost, takeOver, attempt]);
 
   // Dropped connection: retry automatically a few times before showing "Rejoin".
   const autoRetries = useRef(0);
@@ -186,6 +188,10 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
           meeting={meeting}
           onLeave={() => void leave(false)}
           onRejoin={() => setAttempt((n) => n + 1)}
+          onTakeOver={() => {
+            setTakeOver(true);
+            setAttempt((n) => n + 1);
+          }}
         />
       </div>
 
