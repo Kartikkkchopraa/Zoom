@@ -3,6 +3,10 @@
 A working clone of the **Zoom Workplace web client**: schedule and manage meetings, then
 meet with real video, audio, screen sharing, chat and host controls, all running in the browser.
 
+**Live app:** https://zoom-gamma-lemon.vercel.app (demo login `aryan@zoomclone.dev` / `password123`)
+
+To try a call, start a **New meeting**, copy the invite link from **ⓘ**, and open it in an incognito window or on another device.
+
 - **Frontend:** Next.js 15 (App Router, TypeScript, Tailwind CSS)
 - **Backend:** FastAPI + SQLAlchemy 2 + Alembic
 - **Database:** SQLite
@@ -323,6 +327,8 @@ cd backend && uv run ruff check .  # lint
 
 cd e2e && npm install && npx playwright install chromium
 npx playwright test                # 15 browser tests (starts both servers itself)
+BASE_URL=https://zoom-gamma-lemon.vercel.app npx playwright test meetings room networking host-controls
+                                   # same tests against the deployed site (no reseeding)
 ```
 
 **What the end-to-end tests do:**
