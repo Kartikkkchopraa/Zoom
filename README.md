@@ -326,7 +326,7 @@ cd backend && uv run pytest        # 59 tests: REST, auth, WebSocket rooms, host
 cd backend && uv run ruff check .  # lint
 
 cd e2e && npm install && npx playwright install chromium
-npx playwright test                # 16 browser tests (starts both servers itself)
+npx playwright test                # 17 browser tests (starts both servers itself)
 BASE_URL=https://zoom-gamma-lemon.vercel.app npx playwright test meetings room networking host-controls
                                    # same tests against the deployed site (no reseeding)
 ```

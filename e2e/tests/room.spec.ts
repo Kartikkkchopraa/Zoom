@@ -76,3 +76,26 @@ test("phone layout is full screen with a compact toolbar", async ({ newPerson })
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
 });
+
+test("camera allowed but microphone blocked: keeps video and explains", async ({ newPerson }) => {
+  const page = await newPerson();
+  // Like an iPhone where the browser app has camera access but no microphone access.
+  await page.context().addInitScript(() => {
+    const getUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = async (constraints) => {
+      if (constraints?.audio) throw new DOMException("Permission denied", "NotAllowedError");
+      return getUserMedia(constraints);
+    };
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "New meeting", exact: true }).first().click();
+  await page.getByRole("button", { name: "Use microphone and camera" }).click();
+
+  await expect(page.getByText("Access to your microphone is blocked")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Stop Video", exact: true })).toBeVisible(); // camera kept
+  await expect(page.getByRole("button", { name: "Join Audio", exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Join Audio", exact: true }).click();
+  await expect(page.getByText("Access to your microphone is blocked").first()).toBeVisible();
+  await endMeetingForAll(page);
+});

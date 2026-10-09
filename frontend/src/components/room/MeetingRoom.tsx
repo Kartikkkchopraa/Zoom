@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { api } from "@/lib/api";
-import { roomActions } from "@/lib/meeting/actions";
+import { DEVICE_ERROR_MS, roomActions } from "@/lib/meeting/actions";
 import { MeetingConnection, setCurrentConnection } from "@/lib/meeting/connection";
 import { useMedia } from "@/lib/meeting/media";
 import { useParticipants } from "@/lib/meeting/participants";
@@ -109,12 +109,20 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
   function allowDevices() {
     // Host/participant video defaults come from the meeting's schedule settings.
     const videoDefault = session.asHost ? meeting.host_video : meeting.participant_video;
-    void useMedia.getState().requestAccess({
-      audio: session.joinAudio,
-      video: session.videoOn && videoDefault,
-      // "Mute participants upon entry" applies to everyone but the host.
-      startMuted: muteOnJoin || (meeting.mute_on_entry && !session.asHost),
-    });
+    void useMedia
+      .getState()
+      .requestAccess({
+        audio: session.joinAudio,
+        video: session.videoOn && videoDefault,
+        // "Mute participants upon entry" applies to everyone but the host.
+        startMuted: muteOnJoin || (meeting.mute_on_entry && !session.asHost),
+      })
+      .then(() => {
+        // Partial access (e.g. camera allowed, microphone blocked) closes the
+        // prompt, so say what's missing and how to fix it.
+        const { permission, error } = useMedia.getState();
+        if (permission === "granted" && error) toast(error, "error", DEVICE_ERROR_MS);
+      });
   }
 
   async function leave(endForAll: boolean) {

@@ -18,7 +18,7 @@ export function Toaster() {
         <div
           key={t.id}
           role="status"
-          className="flex items-center gap-2 rounded-lg border border-line bg-white px-4 py-2.5 text-sm text-ink shadow-lg"
+          className="flex max-w-md items-center gap-2 rounded-lg border border-line bg-white px-4 py-2.5 text-sm text-ink shadow-lg [&>svg]:shrink-0"
         >
           {ICONS[t.tone]}
           {t.message}

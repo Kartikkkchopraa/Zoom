@@ -24,6 +24,9 @@ const SETTING_KEYS: Record<keyof HostSettings, string> = {
  * which echoes them back to everyone (including us) so ordering is shared.
  */
 
+// Device errors carry instructions (e.g. iPhone Settings), so keep them up longer.
+export const DEVICE_ERROR_MS = 9000;
+
 const send = (message: Record<string, unknown>) => currentConnection()?.send(message);
 const isAttendee = () => useRoom.getState().self?.role === "attendee";
 
@@ -33,7 +36,7 @@ export const roomActions = {
     if (!media.audioConnected) {
       return void media.connectAudio().then(() => {
         const { error, audioConnected } = useMedia.getState();
-        if (!audioConnected) toast(error ?? "Couldn't connect your microphone", "error");
+        if (!audioConnected) toast(error ?? "Couldn't connect your microphone", "error", DEVICE_ERROR_MS);
       });
     }
     if (media.micMuted && isAttendee() && !useRoom.getState().host.allowUnmute) {
@@ -44,7 +47,11 @@ export const roomActions = {
 
   toggleCamera() {
     const media = useMedia.getState();
-    return media.videoTrack ? media.stopCamera() : media.startCamera();
+    if (media.videoTrack) return media.stopCamera();
+    return media.startCamera().then(() => {
+      const { error, videoTrack } = useMedia.getState();
+      if (!videoTrack) toast(error ?? "Couldn't start your camera", "error", DEVICE_ERROR_MS);
+    });
   },
 
   async toggleShare() {

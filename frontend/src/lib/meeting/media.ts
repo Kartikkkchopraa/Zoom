@@ -49,12 +49,27 @@ interface MediaState {
 
 const VIDEO_CONSTRAINTS: MediaTrackConstraints = { width: { ideal: 1280 }, height: { ideal: 720 } };
 
-function describe(err: unknown): string {
+type DeviceKind = "camera" | "microphone" | "camera or microphone";
+
+const isIOS = () =>
+  typeof navigator !== "undefined" &&
+  (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+
+/** A user-facing reason for a getUserMedia failure, naming the device. */
+function describe(err: unknown, device: DeviceKind): string {
   const name = err instanceof DOMException ? err.name : "";
-  if (name === "NotAllowedError") return "Permission to use the camera or microphone was denied";
-  if (name === "NotFoundError") return "No camera or microphone was found";
-  if (name === "NotReadableError") return "Your camera or microphone is in use by another app";
-  return "Couldn't access your camera or microphone";
+  if (name === "NotAllowedError") {
+    // On iPhone the browser app itself needs access in iOS Settings, and a
+    // block there looks to the page exactly like the user saying no.
+    const where = isIOS()
+      ? ` Check iPhone Settings → your browser (e.g. Chrome or Safari) → ${device === "microphone" ? "Microphone" : "Camera / Microphone"}, then reload.`
+      : " Allow it from the site settings in your browser's address bar.";
+    return `Access to your ${device} is blocked.${where}`;
+  }
+  if (name === "NotFoundError") return `No ${device} was found`;
+  if (name === "NotReadableError") return `Your ${device} is in use by another app`;
+  return `Couldn't access your ${device}`;
 }
 
 async function listDevices(): Promise<Devices> {
@@ -104,32 +119,35 @@ export const useMedia = create<MediaState>((set, get) => {
 
     async requestAccess({ audio, video, startMuted }) {
       set({ error: null });
-      // One prompt for both (the browser remembers the grant for later toggles);
-      // fall back to whichever device exists if the machine lacks the other.
-      const attempts: MediaStreamConstraints[] = [
-        { audio: true, video: VIDEO_CONSTRAINTS },
-        { audio: true },
-        { video: VIDEO_CONSTRAINTS },
-      ];
-      let stream: MediaStream | null = null;
-      let error: string | null = null;
-      for (const constraints of attempts) {
+      let audioTrack: MediaStreamTrack | null = null;
+      let videoTrack: MediaStreamTrack | null = null;
+      const errors: string[] = [];
+      try {
+        // One prompt for both; the browser remembers the grant for later toggles.
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: VIDEO_CONSTRAINTS });
+        audioTrack = stream.getAudioTracks()[0] ?? null;
+        videoTrack = stream.getVideoTracks()[0] ?? null;
+      } catch {
+        // Partial access is common (no webcam, or the camera allowed but the
+        // microphone blocked): ask for each device separately and keep what works.
         try {
-          stream = await navigator.mediaDevices.getUserMedia(constraints);
-          break;
+          videoTrack = (await navigator.mediaDevices.getUserMedia({ video: VIDEO_CONSTRAINTS })).getVideoTracks()[0];
         } catch (err) {
-          error ??= describe(err);
-          if (err instanceof DOMException && err.name === "NotAllowedError") break;
+          errors.push(describe(err, "camera"));
+        }
+        try {
+          audioTrack = (await navigator.mediaDevices.getUserMedia({ audio: true })).getAudioTracks()[0];
+        } catch (err) {
+          errors.push(describe(err, "microphone"));
         }
       }
-      if (!stream) {
+      const error = errors.length ? errors.join(" ") : null;
+      if (!audioTrack && !videoTrack) {
         set({ permission: "denied", error });
         await refreshDevices();
         return;
       }
 
-      const audioTrack = stream.getAudioTracks()[0] ?? null;
-      const videoTrack = stream.getVideoTracks()[0] ?? null;
       const keepAudio = audio && audioTrack !== null;
       if (audioTrack) {
         if (keepAudio) audioTrack.enabled = !startMuted;
@@ -138,7 +156,7 @@ export const useMedia = create<MediaState>((set, get) => {
       if (videoTrack && !video) videoTrack.stop();
       set({
         permission: "granted",
-        error: audioTrack && videoTrack ? null : error,
+        error,
         audioTrack: keepAudio ? audioTrack : null,
         audioConnected: keepAudio,
         micMuted: startMuted,
@@ -160,7 +178,7 @@ export const useMedia = create<MediaState>((set, get) => {
         set({ audioTrack: track, audioConnected: true, micMuted: true, permission: "granted", error: null });
         await refreshDevices();
       } catch (err) {
-        set({ error: describe(err) });
+        set({ error: describe(err, "microphone") });
       }
     },
 
@@ -174,11 +192,11 @@ export const useMedia = create<MediaState>((set, get) => {
     async startCamera() {
       if (get().videoTrack) return;
       try {
-        const track = await getCam(get().camId);
+        const track = await getCam(get().camId).catch(() => getCam(null));
         set({ videoTrack: track, permission: "granted", error: null });
         await refreshDevices();
       } catch (err) {
-        set({ error: describe(err) });
+        set({ error: describe(err, "camera") });
       }
     },
 
