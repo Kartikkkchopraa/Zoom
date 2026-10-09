@@ -25,3 +25,7 @@ __pycache__/
 node_modules/
 .next/
 out/
+
+# Playwright
+test-results/
+playwright-report/

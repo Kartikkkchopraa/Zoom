@@ -5,7 +5,7 @@ import { create } from "zustand";
 /**
  * Local media (microphone, camera, screen share) for the meeting room.
  *
- * Tracks live here so the toolbar, device menus, self-view and (Phase 5) the
+ * Tracks live here so the toolbar, device menus, self-view and the
  * peer connections all read one source of truth. Muting the mic disables the
  * track (instant, no renegotiation); turning the camera off stops the track so
  * the camera light goes off, like Zoom.

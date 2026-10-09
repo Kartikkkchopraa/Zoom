@@ -6,10 +6,10 @@ import { useState } from "react";
 
 import { api, ApiError } from "./api";
 import { useMeetingPrefs } from "./prefs";
-import { queryKeys, useMe } from "./queries";
+import { queryKeys } from "./queries";
 import { useJoinSessions, type JoinSession } from "./session";
 import { toast } from "./toast";
-import type { Meeting } from "./types";
+import type { Me, Meeting } from "./types";
 
 /**
  * Every way into a meeting room (new instant meeting, starting a scheduled
@@ -19,7 +19,6 @@ import type { Meeting } from "./types";
 export function useLaunchMeeting() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: me } = useMe();
   const saveSession = useJoinSessions((s) => s.save);
   const [busy, setBusy] = useState(false);
 
@@ -40,37 +39,41 @@ export function useLaunchMeeting() {
     }
   }
 
-  const hostSession = (meeting: Meeting): JoinSession => ({
-    displayName: me?.user.name ?? "Host",
+  // The profile supplies the display name and join settings. A fast click can
+  // beat the initial /me request, so wait for it rather than use placeholders.
+  const loadMe = () => queryClient.ensureQueryData<Me>({ queryKey: queryKeys.me, queryFn: api.me });
+
+  const hostSession = (meeting: Meeting, me: Me): JoinSession => ({
+    displayName: me.user.name,
     credential: meeting.meeting_code,
     joinAudio: true,
-    videoOn: useMeetingPrefs.getState().startWithVideo && !me?.settings.video_off_on_join,
+    videoOn: useMeetingPrefs.getState().startWithVideo && !me.settings.video_off_on_join,
     asHost: true,
   });
 
   /** "New meeting": instant meeting (or the PMI room, per the ▾ menu) as host. */
   const newMeeting = () =>
     run(async () => {
-      const meeting = await api.createInstant(useMeetingPrefs.getState().usePmi);
-      enterRoom(meeting.meeting_code, hostSession(meeting));
+      const [me, meeting] = await Promise.all([loadMe(), api.createInstant(useMeetingPrefs.getState().usePmi)]);
+      enterRoom(meeting.meeting_code, hostSession(meeting, me));
     });
 
   /** "Start" on a meeting the user hosts. */
   const startMeeting = (meeting: Meeting) =>
     run(async () => {
-      const started = await api.startMeeting(meeting.id);
-      enterRoom(started.meeting_code, hostSession(started));
+      const [me, started] = await Promise.all([loadMe(), api.startMeeting(meeting.id)]);
+      enterRoom(started.meeting_code, hostSession(started, me));
     });
 
   /** "Join" on a meeting the user was invited to; the invite link skips the passcode. */
   const joinInvited = (meeting: Meeting) =>
     run(async () => {
-      const room = await api.joinCheck(meeting.invite_link);
+      const [me, room] = await Promise.all([loadMe(), api.joinCheck(meeting.invite_link)]);
       enterRoom(room.meeting_code, {
-        displayName: me?.user.name ?? "Guest",
+        displayName: me.user.name,
         credential: meeting.invite_link,
         joinAudio: true,
-        videoOn: !me?.settings.video_off_on_join,
+        videoOn: !me.settings.video_off_on_join,
         asHost: false,
       });
     });
