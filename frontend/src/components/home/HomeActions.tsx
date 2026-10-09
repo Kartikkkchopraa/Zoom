@@ -99,20 +99,25 @@ function ActionTile({
 }) {
   return (
     <div className="flex w-14 flex-col items-center whitespace-nowrap">
+      {/* The button stays put and only the tile inside lifts, so a pointer near its
+          edge can't fall off the lifted tile and make it bounce. */}
       <button
         type="button"
         aria-label={label}
         onClick={onClick}
         disabled={disabled}
-        className={clsx(
-          // Lifts with a soft shadow on hover, like Zoom's Home tiles.
-          "flex size-14 items-center justify-center rounded-2xl transition-[background-color,transform,box-shadow] duration-200 hover:-translate-y-1 focus-visible:-translate-y-1 disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none",
-          color === "orange"
-            ? "bg-zoom-orange hover:bg-zoom-orange-hover hover:shadow-[0_6px_14px_rgba(255,116,46,0.4)]"
-            : "bg-zoom-blue hover:bg-zoom-blue-hover hover:shadow-[0_6px_14px_rgba(11,92,255,0.35)]",
-        )}
+        className="group size-14 rounded-2xl outline-none disabled:opacity-60"
       >
-        {children}
+        <span
+          className={clsx(
+            "flex size-full items-center justify-center rounded-2xl transition-[transform,box-shadow] duration-200 ease-out",
+            "group-hover:-translate-y-0.5 group-hover:shadow-[0_6px_12px_rgba(0,0,0,0.22)] group-focus-visible:-translate-y-0.5 group-focus-visible:shadow-[0_6px_12px_rgba(0,0,0,0.22)]",
+            "group-disabled:translate-y-0 group-disabled:shadow-none",
+            color === "orange" ? "bg-zoom-orange" : "bg-zoom-blue",
+          )}
+        >
+          {children}
+        </span>
       </button>
       {caption ?? <span className="mt-2 text-sm text-ink-2">{label}</span>}
     </div>
