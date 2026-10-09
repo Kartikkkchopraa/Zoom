@@ -95,6 +95,8 @@ export async function joinViaLink(page: Page, invite: string, name: string, { vi
   }
   await page.getByLabel("Your Name").fill(name);
   await page.getByRole("button", { name: "Join", exact: true }).click();
+  // Wait to leave the preview, whose own Mute/Unmute button would otherwise match.
+  await page.waitForURL((url) => !url.pathname.endsWith("/join"));
 }
 
 export async function endMeetingForAll(page: Page): Promise<void> {
