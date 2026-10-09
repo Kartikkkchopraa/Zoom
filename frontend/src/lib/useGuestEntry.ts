@@ -12,10 +12,11 @@ import { queryKeys } from "./queries";
  * Returns true once settled; don't load the profile before that, or the
  * default-user fallback would sign this browser in first.
  */
-export function useGuestEntry(): boolean {
+export function useGuestEntry(enabled = true): boolean {
   const queryClient = useQueryClient();
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(!enabled);
   useEffect(() => {
+    if (!enabled) return;
     api
       .continueAsGuest()
       .catch(() => undefined) // offline etc.: the join check reports real problems
@@ -23,6 +24,6 @@ export function useGuestEntry(): boolean {
         queryClient.invalidateQueries({ queryKey: queryKeys.me });
         setReady(true);
       });
-  }, [queryClient]);
+  }, [enabled, queryClient]);
   return ready;
 }

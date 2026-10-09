@@ -331,7 +331,7 @@ cd backend && uv run pytest        # 63 tests: REST, auth, WebSocket rooms, host
 cd backend && uv run ruff check .  # lint
 
 cd e2e && npm install && npx playwright install chromium
-npx playwright test                # 18 browser tests (starts both servers itself)
+npx playwright test                # 19 browser tests (starts both servers itself)
 BASE_URL=https://zoom-gamma-lemon.vercel.app npx playwright test meetings room networking host-controls
                                    # same tests against the deployed site (no reseeding)
 ```
@@ -357,7 +357,7 @@ BASE_URL=https://zoom-gamma-lemon.vercel.app npx playwright test meetings room n
 
 ## Assumptions
 
-- **One default user is signed in** unless someone signs out. Guests can join by link without an account.
+- **One default user is signed in** unless someone signs out. Guests can join by link without an account: a browser with no session that opens any meeting link (the invite link or the room's own URL) joins as a guest instead of becoming the default user.
 - **Recordings, Summaries, Notes, Team Chat, Contacts and calendar sync** are visible as placeholders but are outside the assignment.
 - **Recurring meetings** aren't supported; the checkbox is shown disabled.
 - **Removing a participant** blocks that browser and that account from rejoining the same session. The meeting owner's account is never blocked.

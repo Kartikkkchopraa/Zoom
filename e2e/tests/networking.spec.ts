@@ -107,6 +107,19 @@ test("host can end for all even after another tab switched accounts", async ({ n
   await expect(guest.getByText("This meeting has been ended by host")).toBeVisible();
 });
 
+test("a meeting URL pasted into a fresh browser joins as a guest", async ({ newPerson }) => {
+  const host = await newPerson();
+  await startInstantMeeting(host);
+
+  // The room's own address (not the invite link), copied from the host's address bar.
+  const other = await newPerson();
+  await other.goto(host.url());
+  await other.waitForURL(/\/join/);
+  await expect(other.getByLabel("Your Name")).toHaveValue("");
+  expect(await other.evaluate(async () => (await fetch("/api/users/me")).status)).toBe(401);
+  await endMeetingForAll(host);
+});
+
 test("a fresh device joining by link is a guest, and blocked audio can be turned on", async ({ newPerson }) => {
   const host = await newPerson();
   const code = await startInstantMeeting(host);
