@@ -114,6 +114,8 @@ export class MeetingConnection {
   private peers: PeerManager | null = null;
   private unsubscribeMedia: (() => void) | null = null;
   private closed = false;
+  /** Settles a pending endForAll(): true when the server confirms, false if refused. */
+  private onEnded: ((ended: boolean) => void) | null = null;
 
   constructor(
     private code: string,
@@ -176,6 +178,25 @@ export class MeetingConnection {
 
   send(message: Record<string, unknown>): void {
     if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(message));
+  }
+
+  /**
+   * End Meeting for All over this connection (the host role comes from the
+   * live room, not the account cookie). Resolves false if the server doesn't
+   * confirm in time, so the caller can fall back to the REST endpoint.
+   */
+  endForAll(timeoutMs = 4000): Promise<boolean> {
+    if (this.ws?.readyState !== WebSocket.OPEN) return Promise.resolve(false);
+    return new Promise((resolve) => {
+      const settle = (ended: boolean) => {
+        clearTimeout(timer);
+        this.onEnded = null;
+        resolve(ended);
+      };
+      const timer = setTimeout(() => settle(false), timeoutMs);
+      this.onEnded = settle;
+      this.send({ type: "end" });
+    });
   }
 
   /** Leave on purpose (button, navigation): tell the server, then close. */
@@ -284,6 +305,12 @@ export class MeetingConnection {
         room.addReaction(msg.peer_id, msg.emoji);
         break;
       case "meeting_ended":
+        if (this.onEnded) {
+          // We ended it ourselves: no "ended by host" screen, the caller navigates away.
+          this.onEnded(true);
+          this.teardown();
+          break;
+        }
         room.setStatus(
           "ended",
           msg.reason === "ended_by_host" ? "This meeting has been ended by host" : "This meeting has ended",
@@ -291,6 +318,10 @@ export class MeetingConnection {
         this.teardown();
         break;
       case "error":
+        if (this.onEnded && msg.code === "not_allowed") {
+          this.onEnded(false); // e.g. no longer host: let the caller fall back
+          break;
+        }
         if (msg.code === "share_in_use" || msg.code === "share_disabled") useMedia.getState().stopShare();
         if (room.status === "connecting") room.setStatus("error", msg.message);
         else toast(msg.message, "error");

@@ -88,3 +88,21 @@ test("attendees wait until the host starts a scheduled meeting", async ({ newPer
   await host.getByRole("button", { name: "Continue without microphone and camera" }).click();
   await endMeetingForAll(host);
 });
+
+test("host can end for all even after another tab switched accounts", async ({ newPerson }) => {
+  const { host, guest } = await hostAndGuest(newPerson);
+
+  // Same browser, new tab: sign in as someone else (replaces the shared session cookie).
+  const otherTab = await host.context().newPage();
+  await otherTab.goto("/");
+  await otherTab.evaluate(() =>
+    fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "priya@zoomclone.dev", password: "password123" }),
+    }),
+  );
+
+  await endMeetingForAll(host);
+  await expect(guest.getByText("This meeting has been ended by host")).toBeVisible();
+});

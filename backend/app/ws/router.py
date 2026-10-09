@@ -11,6 +11,7 @@ from app.ws.protocol import (
     AskUnmuteMsg,
     ChatMsg,
     DenyMsg,
+    EndMsg,
     JoinMsg,
     LeaveMsg,
     MuteAllMsg,
@@ -83,6 +84,7 @@ async def meeting_socket(ws: WebSocket, code: str) -> None:
         SettingsMsg: manager.on_settings,
         AdmitMsg: manager.on_admit,
         DenyMsg: manager.on_deny,
+        EndMsg: manager.on_end,
     }
     try:
         await manager.join(room, peer, info.status)

@@ -23,6 +23,7 @@ from app.ws.protocol import (
     AskUnmuteMsg,
     ChatMsg,
     DenyMsg,
+    EndMsg,
     MuteAllMsg,
     MuteMsg,
     PeerState,
@@ -512,6 +513,19 @@ class RoomManager:
                 waiting,
                 {"type": "removed", "message": "The host has removed you from the waiting room"},
             )
+
+    async def on_end(self, room: Room, peer: Peer, msg: EndMsg) -> None:
+        """End Meeting for All, sent over the meeting's own connection.
+
+        The host role here comes from the live room, so this works even if the
+        browser's account session changed since joining (unlike the REST call).
+        """
+        if peer.role is not HOST:
+            return await self.error(
+                peer, "not_allowed", "Only the host can end the meeting for all"
+            )
+        await self.db.run(live.end_live_room, room.meeting_id)
+        await self.end(room.code)
 
 
 manager = RoomManager()

@@ -141,3 +141,21 @@ def test_host_leaving_hands_over_the_host_role(client, code):
             "peer_id": guest_id,
             "patch": {"role": "host"},
         }
+
+
+def test_host_ends_meeting_over_the_socket(client, code, db):
+    from app.models import Meeting, MeetingStatus
+
+    with ExitStack() as stack:
+        host, guest, _ = _host_and_guest(client, stack, code)
+
+        guest.send_json({"type": "end"})
+        assert guest.receive_json()["code"] == "not_allowed"
+
+        host.send_json({"type": "end"})
+        assert guest.receive_json() == {"type": "meeting_ended", "reason": "ended_by_host"}
+        assert host.receive_json() == {"type": "meeting_ended", "reason": "ended_by_host"}
+
+    db.expire_all()
+    meeting = db.query(Meeting).filter_by(meeting_code=code).one()
+    assert meeting.status is MeetingStatus.ENDED

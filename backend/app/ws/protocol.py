@@ -130,6 +130,12 @@ class DenyMsg(BaseModel):
     peer_id: str
 
 
+class EndMsg(BaseModel):
+    """End Meeting for All (host only)."""
+
+    type: Literal["end"]
+
+
 ClientMessage = Annotated[
     JoinMsg
     | SignalMsg
@@ -145,7 +151,8 @@ ClientMessage = Annotated[
     | SetRoleMsg
     | SettingsMsg
     | AdmitMsg
-    | DenyMsg,
+    | DenyMsg
+    | EndMsg,
     Field(discriminator="type"),
 ]
 client_message = TypeAdapter(ClientMessage)

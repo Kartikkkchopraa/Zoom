@@ -281,7 +281,7 @@ Every error comes back in the same shape: `{"error": {"code": "...", "message": 
 | Sender | Messages |
 |---|---|
 | Any client | `join`, `signal`, `state`, `chat`, `reaction`, `rename`, `leave` |
-| Hosts and co-hosts only | `mute`, `mute_all`, `ask_unmute`, `remove`, `set_role`, `settings`, `admit`, `deny` |
+| Hosts and co-hosts only | `mute`, `mute_all`, `ask_unmute`, `remove`, `set_role`, `settings`, `admit`, `deny`, `end` (host only) |
 | Server | `welcome`, `waiting_for_host`, `waiting_room`, `waiting_list`, `peer_joined`, `peer_left`, `peer_updated`, `settings_updated`, `signal`, `chat`, `reaction`, `force_mute`, `unmute_request`, `removed`, `meeting_ended`, `error` |
 
 ---
@@ -318,11 +318,11 @@ e2e/             Playwright end-to-end tests (multi-browser meetings)
 ## Tests
 
 ```bash
-cd backend && uv run pytest        # 56 tests: REST, auth, WebSocket rooms, host controls
+cd backend && uv run pytest        # 57 tests: REST, auth, WebSocket rooms, host controls
 cd backend && uv run ruff check .  # lint
 
 cd e2e && npm install && npx playwright install chromium
-npx playwright test                # 14 browser tests (starts both servers itself)
+npx playwright test                # 15 browser tests (starts both servers itself)
 ```
 
 **What the end-to-end tests do:**

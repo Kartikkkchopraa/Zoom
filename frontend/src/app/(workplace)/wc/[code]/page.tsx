@@ -40,9 +40,8 @@ export default function MeetingRoomPage({ params }: { params: Promise<{ code: st
     staleTime: Infinity, // validated once per visit; don't re-check on window focus
   });
 
-  async function leave(endForAll: boolean) {
+  async function leave() {
     leavingRef.current = true;
-    if (endForAll && room.data) await api.endMeeting(room.data.id);
     clearSession(code);
     queryClient.invalidateQueries({ queryKey: queryKeys.meetings });
     router.push("/");

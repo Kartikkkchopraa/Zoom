@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { api } from "@/lib/api";
 import { roomActions } from "@/lib/meeting/actions";
 import { MeetingConnection, setCurrentConnection } from "@/lib/meeting/connection";
 import { useMedia } from "@/lib/meeting/media";
 import { useParticipants } from "@/lib/meeting/participants";
 import { useRoom } from "@/lib/meeting/room";
 import type { JoinSession } from "@/lib/session";
+import { toast } from "@/lib/toast";
 import type { MeetingRoom as MeetingRoomData } from "@/lib/types";
 
 import { ChatPanel } from "./ChatPanel";
@@ -27,7 +29,8 @@ interface MeetingRoomProps {
   session: JoinSession;
   /** The user's "Mute my microphone when joining" setting. */
   muteOnJoin: boolean;
-  onLeave: (endForAll: boolean) => Promise<void>;
+  /** Called after leaving (or ending); navigates away. */
+  onLeave: () => Promise<void>;
 }
 
 /** The in-meeting experience: header, video stage, side panels and toolbar. */
@@ -116,9 +119,14 @@ export function MeetingRoom({ meeting, session, muteOnJoin, onLeave }: MeetingRo
 
   async function leave(endForAll: boolean) {
     setLeaving(true);
-    connectionRef.current?.leave();
     try {
-      await onLeave(endForAll);
+      if (endForAll) {
+        const ended = await connectionRef.current?.endForAll();
+        // Socket down or refused: the REST endpoint does the same job.
+        if (!ended) await api.endMeeting(meeting.id).catch(() => toast("Couldn't end the meeting", "error"));
+      }
+      connectionRef.current?.leave();
+      await onLeave();
     } finally {
       setLeaving(false);
     }
